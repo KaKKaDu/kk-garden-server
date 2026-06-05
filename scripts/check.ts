@@ -2,6 +2,8 @@ import { execSync } from "node:child_process";
 import chalk from "chalk";
 import ora, { type Ora } from "ora";
 
+/* eslint-disable no-console */
+
 function run(command: string, label: string) {
   const spinner: Ora = ora(label).start();
 
