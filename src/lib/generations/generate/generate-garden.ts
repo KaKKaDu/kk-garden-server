@@ -1,12 +1,7 @@
-import {
-  DecorationConstants,
-  GridConstants,
-  ObjectConstants,
-  PathConstants,
-} from "@kk-garden/shared/constants";
 import type {
   GardenDrawData,
   GardenGridConstants,
+  GardenGridConstantsDto,
   StaticDrawReport,
 } from "@kk-garden/shared/types";
 import {
@@ -23,78 +18,13 @@ import type {
   GeneratedStaticSpritesDrawData,
 } from "@lib/generations/generate/draw-data.types.ts";
 import { ObjectsLayerGenerator } from "@lib/generations/generate/segment-generators/generate-objects.ts";
-
-type GardenGeneratorConfig = {
-  gridConstants: GridConstants;
-  largeGridConstants: GridConstants;
-  pathConstants: PathConstants;
-  decorationConstants: DecorationConstants;
-  bushConstants: ObjectConstants;
-  stonConstants: ObjectConstants;
-  treeConstants: ObjectConstants;
-};
-
-const config = {
-  gridConstants: new GridConstants(32, 17, 17),
-  largeGridConstants: new GridConstants(68, 8, 8),
-  pathConstants: new PathConstants(
-    {
-      turn: 0.05,
-      accuracy: 0.9,
-    },
-    {
-      paths: 1,
-      maxLength: 40,
-      minLength: 15,
-      maxTurns: 3,
-    },
-  ),
-  decorationConstants: new DecorationConstants(
-    {
-      density: 3,
-      frequency: 0.25,
-    },
-    {
-      padding: 6,
-    },
-  ),
-  bushConstants: new ObjectConstants(
-    {
-      density: 0.3,
-      grouping: 0.4,
-      diversity: 1,
-    },
-    {
-      minAmount: 8,
-      maxAmount: 14,
-    },
-  ),
-  stonConstants: new ObjectConstants(
-    {
-      density: 0.3,
-      grouping: 0.4,
-      diversity: 1,
-    },
-    {
-      minAmount: 8,
-      maxAmount: 14,
-    },
-  ),
-  treeConstants: new ObjectConstants(
-    {
-      density: 0.3,
-      grouping: 0.9,
-      diversity: 1,
-    },
-    {
-      minAmount: 10,
-      maxAmount: 16,
-    },
-  ),
-} as const satisfies GardenGeneratorConfig;
+import {
+  generationsConfig,
+  type GardenGeneratorConfig,
+} from "@lib/generations/generations-config.js";
 
 export class GardenGenerator {
-  private static readonly config: GardenGeneratorConfig = config;
+  private static readonly config: GardenGeneratorConfig = generationsConfig;
 
   public static generate(): GardenDrawData {
     const tileGenerator = new TilesLayerGenerator(this.config.gridConstants);
@@ -148,10 +78,17 @@ export class GardenGenerator {
     };
   }
 
-  public static getGridConstants(): GardenGridConstants {
+  public static getGridConstants = (): GardenGridConstants => {
     return {
-      gridConstants: this.config.gridConstants,
-      largeGridConstants: this.config.largeGridConstants,
+      gridConstants: generationsConfig.gridConstants,
+      largeGridConstants: generationsConfig.largeGridConstants,
     };
-  }
+  };
+
+  public static getGridConstantsDto = (): GardenGridConstantsDto => {
+    return {
+      gridConstants: generationsConfig.gridConstants.toDto(),
+      largeGridConstants: generationsConfig.largeGridConstants.toDto(),
+    };
+  };
 }

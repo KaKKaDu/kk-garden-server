@@ -26,7 +26,7 @@ export const handleRoutes = async (
         if (!current.success) {
           return [...data, ...current.errors];
         }
-        return current;
+        return data;
       },
       [],
     );

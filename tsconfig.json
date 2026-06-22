@@ -27,8 +27,6 @@
     "declaration": true,
     "declarationMap": true,
 
-    "exactOptionalPropertyTypes": true,
-
     "noImplicitReturns": true,
     "noImplicitOverride": true,
     "noUnusedLocals": true,
