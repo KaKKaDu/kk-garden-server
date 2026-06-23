@@ -3,3 +3,6 @@ dist
 .DS_store
 
 .env
+
+GEMINI.md
+*SKILL.md
