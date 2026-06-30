@@ -16,3 +16,8 @@ export {
   GardenDrawDataDtoMongoSchema,
   parseGardenDrawDataDto,
 } from "./garden-draw-data-dto.mongo.schema.js";
+export {
+  VisualisationDtoMongoSchema,
+  parseVisualisationDto,
+} from "./visualisation-dto.mongo.schema.js";
+export { UserMongoSchema, parseUser } from "./user.mongo.schema.js";

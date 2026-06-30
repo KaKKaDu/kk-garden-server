@@ -4,6 +4,11 @@ import {
   validatorCompiler,
 } from "fastify-type-provider-zod";
 
+export const generator = {
+  version: "1.0.0",
+  normalization: "1.0.0",
+} as const;
+
 export const init = async (
   content: (app: FastifyInstance) => Promise<void>,
 ): Promise<void> => {
