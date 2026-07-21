@@ -2,6 +2,7 @@ import mongoose, { Mongoose } from "mongoose";
 import { handleError, type SuccessDataAny } from "@kk-garden/shared/errors";
 import type { Nullable } from "@kk-garden/shared/types";
 import { Logger } from "@lib/logs/logger.js";
+import { getEnvService } from "@/services/env/index.js";
 
 export class MongoRepository {
   private connection: Nullable<Mongoose> = null;
@@ -12,12 +13,14 @@ export class MongoRepository {
         return { success: true, data: this.connection };
       }
 
-      const mongoUri: Nullable<string> = process.env.MONGODB_URI;
+      const mongoUri: Nullable<string> =
+        getEnvService().getRawEnvValue("MONGODB_URI");
       if (!mongoUri) {
         throw new Error("MONGODB_URI is not defined in environment variables");
       }
 
-      const dbName: string = process.env.MONGODB_DB_NAME || "kk-garden";
+      const dbName: string =
+        getEnvService().getRawEnvValue("MONGODB_DB_NAME") || "kk-garden";
 
       this.connection = await mongoose.connect(mongoUri, {
         dbName,
