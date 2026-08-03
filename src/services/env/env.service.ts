@@ -1,4 +1,4 @@
-import type { ServerEnvVariable } from "@/../env/env.schema.js";
+import type { ServerEnvVariable } from "@/../env-vars/env.schema.js";
 import type { Nullable } from "@kk-garden/shared/types";
 
 export type EnvVariableFormatter = (

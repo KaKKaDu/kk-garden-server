@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 import chalk from "chalk";
 import ora from "ora";
-import { serverEnvSchema } from "../env/env.schema.js";
+import { serverEnvSchema } from "../env-vars/env.schema.js";
 
 /* eslint-disable no-console */
 

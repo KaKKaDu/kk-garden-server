@@ -1,9 +1,10 @@
 import type { SuccessDataAny } from "@kk-garden/shared/errors";
 import type { Nullable, User } from "@kk-garden/shared/types";
-import type { Mongoose, Model } from "mongoose";
+import type { ClientSession, Mongoose, Model } from "mongoose";
 import { UserMongoSchema, parseUser } from "@/schemas/models/index.js";
 import type { MongoService } from "@/services/mongo/mongo.service.js";
 import type { DocumentLike, UpdateUserPayload } from "@/services/user/types.js";
+import { transactional } from "@/types/mongo.types.js";
 
 const USER_MODEL_NAME: string = "User";
 const USER_COLLECTION_NAME: string = "users";
@@ -38,84 +39,123 @@ export class UserRepository {
     });
   }
 
-  async getAll(): Promise<SuccessDataAny<User[]>> {
-    return this.mongoService.execute<User[]>(
-      async (db: Mongoose): Promise<User[]> => {
-        const model: Model<User> = this.getModel(db);
-        const documents: DocumentLike[] = await model.find().exec();
-        return documents.map((document: DocumentLike) => this.toDto(document));
-      },
-      "UserRepository.getAll",
-    );
-  }
+  getAll = transactional(
+    async (
+      session: Nullable<ClientSession>,
+    ): Promise<SuccessDataAny<User[]>> => {
+      return this.mongoService.execute<User[]>(
+        async (db: Mongoose): Promise<User[]> => {
+          const model: Model<User> = this.getModel(db);
+          const query = model.find();
+          if (session) {
+            query.session(session);
+          }
+          const documents: DocumentLike[] = await query.exec();
+          return documents.map((document: DocumentLike) =>
+            this.toDto(document),
+          );
+        },
+        "UserRepository.getAll",
+      );
+    },
+  );
 
-  async getById(id: string): Promise<SuccessDataAny<User>> {
-    return this.mongoService.execute<User>(
-      async (db: Mongoose): Promise<User> => {
-        const model: Model<User> = this.getModel(db);
-        const document: DocumentLike | null = await model.findById(id).exec();
+  getById = transactional(
+    async (
+      id: string,
+      session: Nullable<ClientSession>,
+    ): Promise<SuccessDataAny<User>> => {
+      return this.mongoService.execute<User>(
+        async (db: Mongoose): Promise<User> => {
+          const model: Model<User> = this.getModel(db);
+          const query = model.findById(id);
+          if (session) {
+            query.session(session);
+          }
+          const document: DocumentLike | null = await query.exec();
 
-        if (!document) {
-          throw new Error(`User with id ${id} was not found`);
-        }
+          if (!document) {
+            throw new Error(`User with id ${id} was not found`);
+          }
 
-        return this.toDto(document);
-      },
-      "UserRepository.getById",
-    );
-  }
+          return this.toDto(document);
+        },
+        "UserRepository.getById",
+      );
+    },
+  );
 
-  async create(payload: User): Promise<SuccessDataAny<User>> {
-    return this.mongoService.execute<User>(
-      async (db: Mongoose): Promise<User> => {
-        const dto: User = parseUser(payload);
-        const model: Model<User> = this.getModel(db);
-        const document: DocumentLike = await model.create(dto);
-        return this.toDto(document);
-      },
-      "UserRepository.create",
-    );
-  }
+  create = transactional(
+    async (
+      payload: User,
+      session: Nullable<ClientSession>,
+    ): Promise<SuccessDataAny<User>> => {
+      return this.mongoService.execute<User>(
+        async (db: Mongoose): Promise<User> => {
+          const dto: User = parseUser(payload);
+          const model: Model<User> = this.getModel(db);
+          const entity = new model(dto);
+          const document: DocumentLike = session
+            ? await entity.save({ session })
+            : await entity.save();
+          return this.toDto(document);
+        },
+        "UserRepository.create",
+      );
+    },
+  );
 
-  async update(
-    id: string,
-    payload: UpdateUserPayload,
-  ): Promise<SuccessDataAny<User>> {
-    return this.mongoService.execute<User>(
-      async (db: Mongoose): Promise<User> => {
-        const model: Model<User> = this.getModel(db);
-        const document: DocumentLike | null = await model
-          .findByIdAndUpdate(id, payload, {
+  update = transactional(
+    async (
+      id: string,
+      payload: UpdateUserPayload,
+      session: Nullable<ClientSession>,
+    ): Promise<SuccessDataAny<User>> => {
+      return this.mongoService.execute<User>(
+        async (db: Mongoose): Promise<User> => {
+          const model: Model<User> = this.getModel(db);
+          const query = model.findByIdAndUpdate(id, payload, {
             new: true,
             runValidators: true,
-          })
-          .exec();
+          });
+          if (session) {
+            query.session(session);
+          }
+          const document: DocumentLike | null = await query.exec();
 
-        if (!document) {
-          throw new Error(`User with id ${id} was not found`);
-        }
+          if (!document) {
+            throw new Error(`User with id ${id} was not found`);
+          }
 
-        return this.toDto(document);
-      },
-      "UserRepository.update",
-    );
-  }
+          return this.toDto(document);
+        },
+        "UserRepository.update",
+      );
+    },
+  );
 
-  async delete(id: string): Promise<SuccessDataAny<User>> {
-    return this.mongoService.execute<User>(
-      async (db: Mongoose): Promise<User> => {
-        const model: Model<User> = this.getModel(db);
-        const document: DocumentLike | null = await model
-          .findByIdAndDelete(id)
-          .exec();
+  delete = transactional(
+    async (
+      id: string,
+      session: Nullable<ClientSession>,
+    ): Promise<SuccessDataAny<User>> => {
+      return this.mongoService.execute<User>(
+        async (db: Mongoose): Promise<User> => {
+          const model: Model<User> = this.getModel(db);
+          const query = model.findByIdAndDelete(id);
+          if (session) {
+            query.session(session);
+          }
+          const document: DocumentLike | null = await query.exec();
 
-        if (!document) {
-          throw new Error(`User with id ${id} was not found`);
-        }
+          if (!document) {
+            throw new Error(`User with id ${id} was not found`);
+          }
 
-        return this.toDto(document);
-      },
-      "UserRepository.delete",
-    );
-  }
+          return this.toDto(document);
+        },
+        "UserRepository.delete",
+      );
+    },
+  );
 }

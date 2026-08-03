@@ -26,7 +26,6 @@ export class Logger {
   }
 
   public static info(message: string): void {
-    console.log(message);
     this.log("info", message);
   }
 
@@ -42,7 +41,7 @@ export class Logger {
       data.errors.forEach((error: AppError) => {
         errorLog += `\n- ${error.status || ""}: ${error.message}`;
       });
-      this.error(`Operation failed: ${context}, \nErrors: `);
+      this.error(`Operation failed: ${context}, \nErrors: ${errorLog}`);
     }
   }
 }

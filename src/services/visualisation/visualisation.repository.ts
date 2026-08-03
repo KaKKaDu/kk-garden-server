@@ -1,6 +1,6 @@
 import type { SuccessDataAny } from "@kk-garden/shared/errors";
 import type { Nullable, VisualisationDto } from "@kk-garden/shared/types";
-import type { Mongoose, Model } from "mongoose";
+import type { ClientSession, Mongoose, Model } from "mongoose";
 import {
   VisualisationDtoMongoSchema,
   parseVisualisationDto,
@@ -10,6 +10,7 @@ import type {
   CreateVisualisationPayload,
   DocumentLike,
 } from "@/services/visualisation/types.js";
+import { transactional } from "@/types/mongo.types.js";
 
 const VISUALISATION_MODEL_NAME: string = "VisualisationDto";
 const VISUALISATION_COLLECTION_NAME: string = "visualisations";
@@ -44,62 +45,96 @@ export class VisualisationRepository {
     });
   }
 
-  async getAll(): Promise<SuccessDataAny<VisualisationDto[]>> {
-    return this.mongoService.execute<VisualisationDto[]>(
-      async (db: Mongoose): Promise<VisualisationDto[]> => {
-        const model: Model<VisualisationDto> = this.getModel(db);
-        const documents: DocumentLike[] = await model.find().exec();
-        return documents.map((document: DocumentLike) => this.toDto(document));
-      },
-      "VisualisationRepository.getAll",
-    );
-  }
+  getAll = transactional(
+    async (
+      session: Nullable<ClientSession>,
+    ): Promise<SuccessDataAny<VisualisationDto[]>> => {
+      return this.mongoService.execute<VisualisationDto[]>(
+        async (db: Mongoose): Promise<VisualisationDto[]> => {
+          const model: Model<VisualisationDto> = this.getModel(db);
+          const query = model.find();
+          if (session) {
+            query.session(session);
+          }
+          const documents: DocumentLike[] = await query.exec();
+          return documents.map((document: DocumentLike) =>
+            this.toDto(document),
+          );
+        },
+        "VisualisationRepository.getAll",
+      );
+    },
+  );
 
-  async getById(id: string): Promise<SuccessDataAny<VisualisationDto>> {
-    return this.mongoService.execute<VisualisationDto>(
-      async (db: Mongoose): Promise<VisualisationDto> => {
-        const model: Model<VisualisationDto> = this.getModel(db);
-        const document: DocumentLike | null = await model.findById(id).exec();
+  getById = transactional(
+    async (
+      id: string,
+      log: boolean = true,
+      session: Nullable<ClientSession>,
+    ): Promise<SuccessDataAny<VisualisationDto>> => {
+      return this.mongoService.execute<VisualisationDto>(
+        async (db: Mongoose): Promise<VisualisationDto> => {
+          const model: Model<VisualisationDto> = this.getModel(db);
+          const query = model.findById(id);
+          if (session) {
+            query.session(session);
+          }
+          const document: DocumentLike | null = await query.exec();
 
-        if (!document) {
-          throw new Error(`VisualisationDto with id ${id} was not found`);
-        }
+          if (!document) {
+            throw new Error(`VisualisationDto with id ${id} was not found`);
+          }
 
-        return this.toDto(document);
-      },
-      "VisualisationRepository.getById",
-    );
-  }
+          return this.toDto(document);
+        },
+        "VisualisationRepository.getById",
+        log,
+      );
+    },
+  );
 
-  async create(
-    payload: CreateVisualisationPayload,
-  ): Promise<SuccessDataAny<VisualisationDto>> {
-    return this.mongoService.execute<VisualisationDto>(
-      async (db: Mongoose): Promise<VisualisationDto> => {
-        const dto: VisualisationDto = parseVisualisationDto(payload);
-        const model: Model<VisualisationDto> = this.getModel(db);
-        const document: DocumentLike = await model.create(dto);
-        return this.toDto(document);
-      },
-      "VisualisationRepository.create",
-    );
-  }
+  create = transactional(
+    async (
+      payload: CreateVisualisationPayload,
+      session: Nullable<ClientSession>,
+    ): Promise<SuccessDataAny<VisualisationDto>> => {
+      return this.mongoService.execute<VisualisationDto>(
+        async (db: Mongoose): Promise<VisualisationDto> => {
+          const dto: VisualisationDto = parseVisualisationDto(payload);
+          const model: Model<VisualisationDto> = this.getModel(db);
+          const entity = new model(dto);
+          const document: DocumentLike = session
+            ? await entity.save({ session })
+            : await entity.save();
+          return this.toDto(document);
+        },
+        "VisualisationRepository.create",
+      );
+    },
+  );
 
-  async delete(id: string): Promise<SuccessDataAny<VisualisationDto>> {
-    return this.mongoService.execute<VisualisationDto>(
-      async (db: Mongoose): Promise<VisualisationDto> => {
-        const model: Model<VisualisationDto> = this.getModel(db);
-        const document: DocumentLike | null = await model
-          .findByIdAndDelete(id)
-          .exec();
+  delete = transactional(
+    async (
+      id: string,
+      session: Nullable<ClientSession>,
+    ): Promise<SuccessDataAny<VisualisationDto>> => {
+      return this.mongoService.execute<VisualisationDto>(
+        async (db: Mongoose): Promise<VisualisationDto> => {
+          const model: Model<VisualisationDto> = this.getModel(db);
+          const query = model.findByIdAndDelete(id);
+          if (session) {
+            query.session(session);
+          }
+          const document: DocumentLike | null = await query.exec();
 
-        if (!document) {
-          throw new Error(`VisualisationDto with id ${id} was not found`);
-        }
+          if (!document) {
+            throw new Error(`VisualisationDto with id ${id} was not found`);
+          }
 
-        return this.toDto(document);
-      },
-      "VisualisationRepository.delete",
-    );
-  }
+          return this.toDto(document);
+        },
+        "VisualisationRepository.delete",
+      );
+    },
+  );
 }

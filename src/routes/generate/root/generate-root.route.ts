@@ -43,8 +43,9 @@ export const generateRootRoute: RouteFactory = (
         const generationsDto: GenerateRootResponse = {
           constants: GardenGenerator.getGridConstantsDto(),
           generations: generations.map(
-            (generation: GardenDrawData): GardenDrawDataDto =>
-              gardenDrawDataTransformer.toDto(generation),
+            (generation: GardenDrawData): GardenDrawDataDto => {
+              return gardenDrawDataTransformer.toDto(generation);
+            },
           ),
         };
 

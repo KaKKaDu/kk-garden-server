@@ -4,9 +4,9 @@
   "description": "Kiryl Kartsialeu EN69783 diploma project server app",
   "author": "Kiryl Kartsialeu",
   "scripts": {
-    "dev": "npm run check && tsx watch --loader ./png-loader.mjs src/server.ts",
+    "dev": "npm run check && tsx watch src/server.ts",
     "build": "npm run check && tsc && tsc-alias",
-    "start": "npm run check && node --loader ./loaders/png-loader.mjs dist/server.js",
+    "start": "npm run check && node dist/server.js",
     "lint": "eslint .",
     "format": "prettier --write .",
     "typescript": "tsc --noEmit",

@@ -21,3 +21,7 @@ export {
   parseVisualisationDto,
 } from "./visualisation-dto.mongo.schema.js";
 export { UserMongoSchema, parseUser } from "./user.mongo.schema.js";
+export {
+  SignatureMongoSchema,
+  parseSignature,
+} from "./signature.mongo.schema.js";

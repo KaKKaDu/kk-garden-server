@@ -1,4 +1,5 @@
 import Fastify, { type FastifyInstance } from "fastify";
+import dotenv from "dotenv";
 import {
   serializerCompiler,
   validatorCompiler,
@@ -12,6 +13,7 @@ export const generator = {
 export const init = async (
   content: (app: FastifyInstance) => Promise<void>,
 ): Promise<void> => {
+  dotenv.config({ quiet: true });
   const app: FastifyInstance = Fastify({ logger: true });
 
   app.setValidatorCompiler(validatorCompiler);

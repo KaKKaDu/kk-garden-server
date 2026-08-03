@@ -15,6 +15,7 @@ export class MongoRepository {
 
       const mongoUri: Nullable<string> =
         getEnvService().getRawEnvValue("MONGODB_URI");
+
       if (!mongoUri) {
         throw new Error("MONGODB_URI is not defined in environment variables");
       }

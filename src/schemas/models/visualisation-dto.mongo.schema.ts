@@ -5,6 +5,7 @@ import { GardenDrawDataDtoMongoSchema } from "@/schemas/index.js";
 
 export const VisualisationDtoMongoSchema = new Schema<VisualisationDto>(
   {
+    _id: { type: String, required: true },
     data: { type: GardenDrawDataDtoMongoSchema, required: true },
     createdAt: { type: Date, required: true },
   },
