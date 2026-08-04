@@ -6,11 +6,8 @@ import {
   parseVisualisationDto,
 } from "@/schemas/models/index.js";
 import type { MongoService } from "@/services/mongo/mongo.service.js";
-import type {
-  CreateVisualisationPayload,
-  DocumentLike,
-} from "@/services/visualisation/types.js";
-import { transactional } from "@/types/mongo.types.js";
+import type { CreateVisualisationPayload } from "@/services/visualisation/types.js";
+import { transactional, type DocumentLike } from "@/types/mongo.types.js";
 
 const VISUALISATION_MODEL_NAME: string = "VisualisationDto";
 const VISUALISATION_COLLECTION_NAME: string = "visualisations";
@@ -44,27 +41,6 @@ export class VisualisationRepository {
       _id: String(raw._id),
     });
   }
-
-  getAll = transactional(
-    async (
-      session: Nullable<ClientSession>,
-    ): Promise<SuccessDataAny<VisualisationDto[]>> => {
-      return this.mongoService.execute<VisualisationDto[]>(
-        async (db: Mongoose): Promise<VisualisationDto[]> => {
-          const model: Model<VisualisationDto> = this.getModel(db);
-          const query = model.find();
-          if (session) {
-            query.session(session);
-          }
-          const documents: DocumentLike[] = await query.exec();
-          return documents.map((document: DocumentLike) =>
-            this.toDto(document),
-          );
-        },
-        "VisualisationRepository.getAll",
-      );
-    },
-  );
 
   getById = transactional(
     async (

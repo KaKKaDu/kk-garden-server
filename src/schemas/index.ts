@@ -11,3 +11,7 @@ export {
   SignatureMongoSchema,
   parseSignature,
 } from "./models/signature.mongo.schema.js";
+export {
+  OwnershipMongoSchema,
+  parseOwnership,
+} from "./models/ownership.mongo.schema.js";

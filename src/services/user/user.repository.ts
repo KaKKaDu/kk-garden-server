@@ -3,8 +3,8 @@ import type { Nullable, User } from "@kk-garden/shared/types";
 import type { ClientSession, Mongoose, Model } from "mongoose";
 import { UserMongoSchema, parseUser } from "@/schemas/models/index.js";
 import type { MongoService } from "@/services/mongo/mongo.service.js";
-import type { DocumentLike, UpdateUserPayload } from "@/services/user/types.js";
-import { transactional } from "@/types/mongo.types.js";
+import type { UpdateUserPayload } from "@/services/user/types.js";
+import { transactional, type DocumentLike } from "@/types/mongo.types.js";
 
 const USER_MODEL_NAME: string = "User";
 const USER_COLLECTION_NAME: string = "users";

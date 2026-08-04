@@ -34,14 +34,6 @@ export class VisualisationService {
     }
   }
 
-  getAll = transactional(
-    async (
-      session: Nullable<ClientSession>,
-    ): Promise<SuccessDataAny<VisualisationDto[]>> => {
-      return this.repository.getAll(session);
-    },
-  );
-
   getById = transactional(
     async (
       id: string,

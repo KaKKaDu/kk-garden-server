@@ -4,12 +4,10 @@ import type { ClientSession } from "mongoose";
 import crypto from "node:crypto";
 import type { CryptoService } from "@/services/crypto/crypto.service.js";
 import type { SignatureRepository } from "@/services/signature/signature.repository.js";
-import type {
-  CreateSignaturePayload,
-  UpdateSignaturePayload,
-} from "@/services/signature/types.js";
+import type { CreateSignaturePayload } from "@/services/signature/types.js";
 import type { VisualisationService } from "@/services/visualisation/visualisation.service.js";
 import { transactional } from "@/types/mongo.types.js";
+import { ulid } from "ulid";
 
 export class SignatureService {
   constructor(
@@ -17,14 +15,6 @@ export class SignatureService {
     private readonly visualisationService: VisualisationService,
     private readonly signatureCryptoService: CryptoService<Signature>,
   ) {}
-
-  getAll = transactional(
-    async (
-      session: Nullable<ClientSession>,
-    ): Promise<SuccessDataAny<Signature[]>> => {
-      return this.repository.getAll(session);
-    },
-  );
 
   getById = transactional(
     async (
@@ -35,22 +25,21 @@ export class SignatureService {
     },
   );
 
+  getByVisualisationId = transactional(
+    async (
+      visualisationId: string,
+      session: Nullable<ClientSession>,
+    ): Promise<SuccessDataAny<Signature>> => {
+      return this.repository.getByVisualisationId(visualisationId, session);
+    },
+  );
+
   create = transactional(
     async (
       payload: CreateSignaturePayload,
       session: Nullable<ClientSession>,
     ): Promise<SuccessDataAny<Signature>> => {
       return this.repository.create(payload, session);
-    },
-  );
-
-  update = transactional(
-    async (
-      id: string,
-      payload: UpdateSignaturePayload,
-      session: Nullable<ClientSession>,
-    ): Promise<SuccessDataAny<Signature>> => {
-      return this.repository.update(id, payload, session);
     },
   );
 
@@ -69,6 +58,16 @@ export class SignatureService {
       session: Nullable<ClientSession>,
     ): Promise<SuccessDataAny<Signature>> => {
       try {
+        const sameSignatureResult = await this.getByVisualisationId(
+          visualisationId,
+          session,
+        );
+        if (sameSignatureResult.success) {
+          throw new Error(
+            `Signature for visualisationId ${visualisationId} already exists`,
+          );
+        }
+
         const visualisationResult = await this.visualisationService.getById(
           visualisationId,
           false,
@@ -90,7 +89,7 @@ export class SignatureService {
 
         const draftSignature: Signature = {
           _id: crypto.randomUUID(),
-          value: crypto.randomUUID(),
+          value: ulid(),
           visualisationId,
           signatureProof: "",
           createdAt: new Date(),

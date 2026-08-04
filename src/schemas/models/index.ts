@@ -25,3 +25,7 @@ export {
   SignatureMongoSchema,
   parseSignature,
 } from "./signature.mongo.schema.js";
+export {
+  OwnershipMongoSchema,
+  parseOwnership,
+} from "./ownership.mongo.schema.js";

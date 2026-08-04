@@ -6,12 +6,8 @@ import {
   parseSignature,
 } from "@/schemas/models/index.js";
 import type { MongoService } from "@/services/mongo/mongo.service.js";
-import type {
-  CreateSignaturePayload,
-  DocumentLike,
-  UpdateSignaturePayload,
-} from "@/services/signature/types.js";
-import { transactional } from "@/types/mongo.types.js";
+import type { CreateSignaturePayload } from "@/services/signature/types.js";
+import { transactional, type DocumentLike } from "@/types/mongo.types.js";
 
 const SIGNATURE_MODEL_NAME: string = "Signature";
 const SIGNATURE_COLLECTION_NAME: string = "signatures";
@@ -46,27 +42,6 @@ export class SignatureRepository {
     });
   }
 
-  getAll = transactional(
-    async (
-      session: Nullable<ClientSession>,
-    ): Promise<SuccessDataAny<Signature[]>> => {
-      return this.mongoService.execute<Signature[]>(
-        async (db: Mongoose): Promise<Signature[]> => {
-          const model: Model<Signature> = this.getModel(db);
-          const query = model.find();
-          if (session) {
-            query.session(session);
-          }
-          const documents: DocumentLike[] = await query.exec();
-          return documents.map((document: DocumentLike) =>
-            this.toDto(document),
-          );
-        },
-        "SignatureRepository.getAll",
-      );
-    },
-  );
-
   getById = transactional(
     async (
       id: string,
@@ -92,6 +67,33 @@ export class SignatureRepository {
     },
   );
 
+  getByVisualisationId = transactional(
+    async (
+      visualisationId: string,
+      session: Nullable<ClientSession>,
+    ): Promise<SuccessDataAny<Signature>> => {
+      return this.mongoService.execute<Signature>(
+        async (db: Mongoose): Promise<Signature> => {
+          const model: Model<Signature> = this.getModel(db);
+          const query = model.findOne({ visualisationId });
+          if (session) {
+            query.session(session);
+          }
+          const document: DocumentLike | null = await query.exec();
+
+          if (!document) {
+            throw new Error(
+              `Signature with visualisationId ${visualisationId} was not found`,
+            );
+          }
+
+          return this.toDto(document);
+        },
+        "SignatureRepository.getByVisualisationId",
+      );
+    },
+  );
+
   create = transactional(
     async (
       payload: CreateSignaturePayload,
@@ -108,35 +110,6 @@ export class SignatureRepository {
           return this.toDto(document);
         },
         "SignatureRepository.create",
-      );
-    },
-  );
-
-  update = transactional(
-    async (
-      id: string,
-      payload: UpdateSignaturePayload,
-      session: Nullable<ClientSession>,
-    ): Promise<SuccessDataAny<Signature>> => {
-      return this.mongoService.execute<Signature>(
-        async (db: Mongoose): Promise<Signature> => {
-          const model: Model<Signature> = this.getModel(db);
-          const query = model.findByIdAndUpdate(id, payload, {
-            new: true,
-            runValidators: true,
-          });
-          if (session) {
-            query.session(session);
-          }
-          const document: DocumentLike | null = await query.exec();
-
-          if (!document) {
-            throw new Error(`Signature with id ${id} was not found`);
-          }
-
-          return this.toDto(document);
-        },
-        "SignatureRepository.update",
       );
     },
   );

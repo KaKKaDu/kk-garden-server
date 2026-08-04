@@ -13,6 +13,10 @@ export type TransactionalMethod<
   direct: (...args: [...TArgs]) => Promise<TResult>;
 };
 
+export type DocumentLike = {
+  toObject: (options?: { flattenMaps?: boolean }) => unknown;
+};
+
 export const transactional = <TArgs extends unknown[], TResult>(
   callback: TransactionalCallback<TArgs, TResult>,
 ): TransactionalMethod<TArgs, TResult> => {

@@ -6,7 +6,7 @@ export const SignatureMongoSchema = new Schema<Signature>(
   {
     _id: { type: String, required: true },
     value: { type: String, required: true, unique: true },
-    visualisationId: { type: String, required: true },
+    visualisationId: { type: String, required: true, unique: true },
     signatureProof: { type: String, required: true },
     createdAt: { type: Date, required: true },
   },
