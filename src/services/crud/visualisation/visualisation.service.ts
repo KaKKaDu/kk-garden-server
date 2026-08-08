@@ -6,8 +6,8 @@ import type {
   VisualisationDto,
 } from "@kk-garden/shared/types";
 import type { ClientSession } from "mongoose";
-import type { VisualisationRepository } from "@/services/visualisation/visualisation.repository.js";
-import type { CreateVisualisationPayload } from "@/services/visualisation/types.js";
+import type { VisualisationRepository } from "@/services/crud/visualisation/visualisation.repository.js";
+import type { CreateVisualisationPayload } from "@/services/crud/visualisation/types.js";
 import { gardenDrawDataTransformer } from "@kk-garden/shared/transformers";
 import { generateGardenDrawDataReport } from "@lib/generations/reports/garden-draw-data-report.js";
 import { transactional } from "@/types/mongo.types.js";
@@ -94,10 +94,7 @@ export class VisualisationService {
     },
   );
 
-  async verify(
-    hashId: string,
-    data: GardenDrawDataDto,
-  ): Promise<SuccessDataAny> {
+  verify(hashId: string, data: GardenDrawDataDto): SuccessDataAny {
     try {
       const hashIdResult: SuccessDataAny<string> = this.resolveHashId(data);
       if (!hashIdResult.success || !hashIdResult.data) {

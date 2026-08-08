@@ -6,7 +6,7 @@ import {
   parseOwnership,
 } from "@/schemas/models/index.js";
 import type { MongoService } from "@/services/mongo/mongo.service.js";
-import type { CreateOwnershipPayload } from "@/services/ownership/types.js";
+import type { CreateOwnershipPayload } from "@/services/crud/ownership/types.js";
 import { transactional, type DocumentLike } from "@/types/mongo.types.js";
 
 const OWNERSHIP_MODEL_NAME: string = "Ownership";

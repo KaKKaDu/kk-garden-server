@@ -1,6 +1,6 @@
 import { getMongoService } from "@/services/mongo/index.js";
-import { UserRepository } from "@/services/user/user.repository.js";
-import { UserService } from "@/services/user/user.service.js";
+import { UserRepository } from "@/services/crud/user/user.repository.js";
+import { UserService } from "@/services/crud/user/user.service.js";
 import type { MongoService } from "@/services/mongo/mongo.service.js";
 
 const mongoService: MongoService = getMongoService();

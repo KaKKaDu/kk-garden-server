@@ -3,9 +3,9 @@ import type { Nullable, Signature } from "@kk-garden/shared/types";
 import type { ClientSession } from "mongoose";
 import crypto from "node:crypto";
 import type { CryptoService } from "@/services/crypto/crypto.service.js";
-import type { SignatureRepository } from "@/services/signature/signature.repository.js";
-import type { CreateSignaturePayload } from "@/services/signature/types.js";
-import type { VisualisationService } from "@/services/visualisation/visualisation.service.js";
+import type { SignatureRepository } from "@/services/crud/signature/signature.repository.js";
+import type { CreateSignaturePayload } from "@/services/crud/signature/types.js";
+import type { VisualisationService } from "@/services/crud/visualisation/visualisation.service.js";
 import { transactional } from "@/types/mongo.types.js";
 import { ulid } from "ulid";
 

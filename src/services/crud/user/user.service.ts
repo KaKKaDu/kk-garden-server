@@ -2,11 +2,11 @@ import type { SuccessDataAny } from "@kk-garden/shared/errors";
 import type { Nullable, User } from "@kk-garden/shared/types";
 import type { ClientSession } from "mongoose";
 import crypto from "node:crypto";
-import type { UserRepository } from "@/services/user/user.repository.js";
+import type { UserRepository } from "@/services/crud/user/user.repository.js";
 import type {
   CreateUserPayload,
   UpdateUserPayload,
-} from "@/services/user/types.js";
+} from "@/services/crud/user/types.js";
 import { transactional } from "@/types/mongo.types.js";
 
 export class UserService {

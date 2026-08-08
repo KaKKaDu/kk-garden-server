@@ -1,9 +1,9 @@
 import type { CryptoService } from "@/services/crypto/crypto.service.js";
 import { getSignatureCryptoService } from "@/services/crypto/index.js";
 import { getMongoService } from "@/services/mongo/index.js";
-import { SignatureRepository } from "@/services/signature/signature.repository.js";
-import { SignatureService } from "@/services/signature/signature.service.js";
-import { getVisualisationService } from "@/services/visualisation/index.js";
+import { SignatureRepository } from "@/services/crud/signature/signature.repository.js";
+import { SignatureService } from "@/services/crud/signature/signature.service.js";
+import { getVisualisationService } from "@/services/crud/visualisation/index.js";
 import type { Signature } from "@kk-garden/shared/types";
 import type { MongoService } from "@/services/mongo/mongo.service.js";
 

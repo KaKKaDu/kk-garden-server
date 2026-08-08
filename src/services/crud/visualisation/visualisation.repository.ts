@@ -6,7 +6,7 @@ import {
   parseVisualisationDto,
 } from "@/schemas/models/index.js";
 import type { MongoService } from "@/services/mongo/mongo.service.js";
-import type { CreateVisualisationPayload } from "@/services/visualisation/types.js";
+import type { CreateVisualisationPayload } from "@/services/crud/visualisation/types.js";
 import { transactional, type DocumentLike } from "@/types/mongo.types.js";
 
 const VISUALISATION_MODEL_NAME: string = "VisualisationDto";

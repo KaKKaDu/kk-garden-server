@@ -6,7 +6,7 @@ import {
   parseSignature,
 } from "@/schemas/models/index.js";
 import type { MongoService } from "@/services/mongo/mongo.service.js";
-import type { CreateSignaturePayload } from "@/services/signature/types.js";
+import type { CreateSignaturePayload } from "@/services/crud/signature/types.js";
 import { transactional, type DocumentLike } from "@/types/mongo.types.js";
 
 const SIGNATURE_MODEL_NAME: string = "Signature";

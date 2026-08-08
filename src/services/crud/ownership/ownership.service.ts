@@ -3,11 +3,11 @@ import type { Nullable, Ownership } from "@kk-garden/shared/types";
 import type { ClientSession } from "mongoose";
 import crypto from "node:crypto";
 import type { CryptoService } from "@/services/crypto/crypto.service.js";
-import type { OwnershipRepository } from "@/services/ownership/ownership.repository.js";
-import type { CreateOwnershipPayload } from "@/services/ownership/types.js";
-import type { SignatureService } from "@/services/signature/signature.service.js";
+import type { OwnershipRepository } from "@/services/crud/ownership/ownership.repository.js";
+import type { CreateOwnershipPayload } from "@/services/crud/ownership/types.js";
+import type { SignatureService } from "@/services/crud/signature/signature.service.js";
 import { transactional } from "@/types/mongo.types.js";
-import type { UserService } from "@/services/user/user.service.js";
+import type { UserService } from "@/services/crud/user/user.service.js";
 
 export class OwnershipService {
   constructor(
