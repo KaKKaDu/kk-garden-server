@@ -2,6 +2,7 @@ import type { OwnershipService } from "@/services/crud/ownership/ownership.servi
 import type { UserService } from "@/services/crud/user/user.service.js";
 import type { SignatureService } from "@/services/crud/signature/signature.service.js";
 import type { VisualisationService } from "@/services/crud/visualisation/visualisation.service.js";
+import type { VisualisationPendingService } from "@/services/crud/visualisation-pending/visualisation-pending.service.js";
 import { type SuccessDataAny } from "@kk-garden/shared/errors";
 import type { MongoService } from "@/services/mongo/mongo.service.js";
 import type {
@@ -18,12 +19,14 @@ export class OwnershipCreationService {
     private readonly userService: UserService,
     private readonly signatureService: SignatureService,
     private readonly visualisationService: VisualisationService,
+    private readonly visualisationPendingService: VisualisationPendingService,
     private readonly mongoService: MongoService,
   ) {}
 
   async createOwnershipTransaction(
     userId: string,
     visualisationId: string,
+    pendingId?: string,
   ): Promise<SuccessDataAny<Ownership>> {
     return this.mongoService.execute(
       async (db: Mongoose): Promise<Ownership> => {
@@ -41,11 +44,17 @@ export class OwnershipCreationService {
                 }
 
                 const verifyVisualisation: SuccessDataAny<VisualisationDto> =
-                  await this.visualisationService.getById(
-                    visualisationId,
-                    true,
-                    session,
-                  );
+                  pendingId
+                    ? await this.visualisationPendingService.persistByPendingIdAndVisualisationId(
+                        pendingId,
+                        visualisationId,
+                        session,
+                      )
+                    : await this.visualisationService.getById(
+                        visualisationId,
+                        true,
+                        session,
+                      );
 
                 if (!verifyVisualisation.success || !verifyVisualisation.data) {
                   throw new Error(
@@ -55,10 +64,11 @@ export class OwnershipCreationService {
 
                 const visualisation: VisualisationDto =
                   verifyVisualisation.data;
+                const resolvedVisualisationId: string = visualisation._id;
 
                 const isVisualisationValid: SuccessDataAny =
                   this.visualisationService.verify(
-                    visualisationId,
+                    resolvedVisualisationId,
                     visualisation.data,
                   );
 
@@ -69,7 +79,10 @@ export class OwnershipCreationService {
                 }
 
                 const createSignature: SuccessDataAny<Signature> =
-                  await this.signatureService.mint(visualisationId, session);
+                  await this.signatureService.mint(
+                    resolvedVisualisationId,
+                    session,
+                  );
 
                 if (!createSignature.success || !createSignature.data) {
                   throw new Error("Signature mint failed");

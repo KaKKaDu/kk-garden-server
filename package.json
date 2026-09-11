@@ -4,9 +4,9 @@
   "description": "Kiryl Kartsialeu EN69783 diploma project server app",
   "author": "Kiryl Kartsialeu",
   "scripts": {
-    "dev": "npm run check && tsx watch src/server.ts",
-    "build": "npm run check && tsc && tsc-alias",
-    "start": "npm run check && node dist/server.js",
+    "dev": "npm run env-validate && npm run check && tsx watch src/server.ts",
+    "build": "npm run env-validate && npm run check && tsc && tsc-alias",
+    "start": "npm run env-validate && npm run check && node dist/server.js",
     "lint": "eslint .",
     "format": "prettier --write .",
     "typescript": "tsc --noEmit",
@@ -22,7 +22,7 @@
   "dependencies": {
     "@fastify/compress": "^8.0.0",
     "@fastify/cors": "^11.2.0",
-    "@kk-garden/shared": "^1.3.5",
+    "@kk-garden/shared": "^1.4.2",
     "dotenv": "^17.4.2",
     "fastify": "^5.8.5",
     "fastify-plugin": "^5.1.0",

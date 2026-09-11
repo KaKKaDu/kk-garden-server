@@ -1,5 +1,7 @@
 import { getVisualisationService } from "@/services/crud/visualisation/index.js";
 import type { VisualisationService } from "@/services/crud/visualisation/visualisation.service.js";
+import { getVisualisationPendingService } from "@/services/crud/visualisation-pending/index.js";
+import type { VisualisationPendingService } from "@/services/crud/visualisation-pending/visualisation-pending.service.js";
 import { getUserService } from "@/services/crud/user/index.js";
 import type { UserService } from "@/services/crud/user/user.service.js";
 import type { SignatureService } from "@/services/crud/signature/signature.service.js";
@@ -11,6 +13,8 @@ import { getMongoService } from "@/services/mongo/index.js";
 import { OwnershipCreationService } from "@/services/transactions/ownership-creation/ownership-creation.service.js";
 
 const visualisationService: VisualisationService = getVisualisationService();
+const visualisationPendingService: VisualisationPendingService =
+  getVisualisationPendingService();
 
 const userService: UserService = getUserService();
 
@@ -26,6 +30,7 @@ const ownershipCreationServiceSingleton: OwnershipCreationService =
     userService,
     signatureService,
     visualisationService,
+    visualisationPendingService,
     mongoService,
   );
 

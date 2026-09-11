@@ -16,7 +16,7 @@ import crypto from "node:crypto";
 export class VisualisationService {
   constructor(private readonly repository: VisualisationRepository) {}
 
-  private resolveHashId(data: GardenDrawDataDto): SuccessDataAny<string> {
+  resolveHashId(data: GardenDrawDataDto): SuccessDataAny<string> {
     try {
       const drawData: Nullable<GardenDrawData> =
         gardenDrawDataTransformer.fromDto(data);

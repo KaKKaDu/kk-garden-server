@@ -15,6 +15,9 @@ import type {
 } from "@kk-garden/shared/types";
 import { GardenGenerator } from "@lib/generations/generate/generate-garden.js";
 import { gardenDrawDataTransformer } from "@kk-garden/shared/transformers";
+import { randomUUID } from "node:crypto";
+import { getPendingVisualisationCreationService } from "@/services/transactions/pending-visualisation-creation/index.js";
+import type { SuccessDataAny } from "@kk-garden/shared/errors";
 
 export const generateRootRoute: RouteFactory = (
   fastify: FastifyInstance,
@@ -33,20 +36,37 @@ export const generateRootRoute: RouteFactory = (
     },
     async (request, reply) => {
       try {
-        const { count } = request.query || 3;
+        const { count = 3, pendingId } = request.query;
+        const resolvedPendingId: string = pendingId
+          ? String(pendingId)
+          : randomUUID().toString();
+
         const generations: GardenDrawData[] = [];
 
         for (let i: number = 0; i < count; i++) {
           generations.push(GardenGenerator.generate());
         }
 
+        const transformedGenerations: GardenDrawDataDto[] = generations.map(
+          (generation: GardenDrawData): GardenDrawDataDto => {
+            return gardenDrawDataTransformer.toDto(generation);
+          },
+        );
+
+        const createPendingVisualisations: SuccessDataAny =
+          await getPendingVisualisationCreationService().createPendingVisualisationsTransaction(
+            resolvedPendingId,
+            transformedGenerations,
+          );
+
+        if (!createPendingVisualisations.success) {
+          throw new Error("Failed to create pending visualisations");
+        }
+
         const generationsDto: GenerateRootResponse = {
           constants: GardenGenerator.getGridConstantsDto(),
-          generations: generations.map(
-            (generation: GardenDrawData): GardenDrawDataDto => {
-              return gardenDrawDataTransformer.toDto(generation);
-            },
-          ),
+          generations: transformedGenerations,
+          pendingId: resolvedPendingId,
         };
 
         reply.status(200).send(generationsDto);
