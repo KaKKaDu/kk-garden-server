@@ -1,8 +1,11 @@
 import type { ClientSession } from "mongoose";
 import type {
   OwnershipVerificationResult,
-  OwnershipId,
+  OwnershipVerificationPoint,
+  UserId,
   Ownership,
+  Signature,
+  VisualisationDto,
 } from "@kk-garden/shared/types";
 import type { SuccessDataAny } from "@kk-garden/shared/errors";
 import type { MongoService } from "@/services/mongo/mongo.service.js";
@@ -11,7 +14,8 @@ import type { SignatureService } from "@/services/crud/signature/signature.servi
 import type { VisualisationService } from "@/services/crud/visualisation/visualisation.service.js";
 import type { UserService } from "@/services/crud/user/user.service.js";
 import type { CryptoService } from "@/services/crypto/crypto.service.js";
-import type { Signature } from "@kk-garden/shared/types";
+
+type VerificationPointKey = keyof OwnershipVerificationResult;
 
 export class OwnershipVerificationService {
   constructor(
@@ -24,8 +28,27 @@ export class OwnershipVerificationService {
     private readonly signatureCryptoService: CryptoService<Signature>,
   ) {}
 
+  private blockPoints(
+    result: OwnershipVerificationResult,
+    keys: VerificationPointKey[],
+    blockedByKey: VerificationPointKey,
+  ): void {
+    for (const key of keys) {
+      result[key] = {
+        status: "blocked",
+        error: `Blocked by ${blockedByKey}`,
+      };
+    }
+  }
+
+  public isFullyVerified(result: OwnershipVerificationResult): boolean {
+    return Object.values(result).every(
+      (point): boolean => point.status === "success",
+    );
+  }
+
   public async verifyOwnership(
-    ownershipId: OwnershipId,
+    userId: UserId,
   ): Promise<SuccessDataAny<OwnershipVerificationResult>> {
     return this.mongoService.execute(
       async (db): Promise<OwnershipVerificationResult> => {
@@ -36,58 +59,122 @@ export class OwnershipVerificationService {
               async (): Promise<
                 SuccessDataAny<OwnershipVerificationResult>
               > => {
+                const successPoint: OwnershipVerificationPoint = {
+                  status: "success",
+                };
                 const verificationResult: OwnershipVerificationResult = {
-                  ownershipExists: { success: true },
-                  signatureExists: { success: true },
-                  visualisationExists: { success: true },
-                  userExists: { success: true },
-                  ownershipProofVerified: { success: true },
-                  signatureProofVerified: { success: true },
-                  visualisationVerified: { success: true },
+                  userExists: { ...successPoint },
+                  ownershipExists: { ...successPoint },
+                  signatureExists: { ...successPoint },
+                  visualisationExists: { ...successPoint },
+                  ownershipProofVerified: { ...successPoint },
+                  signatureProofVerified: { ...successPoint },
+                  visualisationVerified: { ...successPoint },
                 };
 
-                // Step 1: Verify ownership exists
-                const ownershipResult = await this.ownershipService.getById(
-                  ownershipId,
+                // Step 1: Verify user exists
+                const userResult = await this.userService.getById(
+                  userId,
+                  session,
+                );
+                if (!userResult.success || !userResult.data) {
+                  verificationResult.userExists = {
+                    status: "failed",
+                    error: "User not found",
+                  };
+                  this.blockPoints(
+                    verificationResult,
+                    [
+                      "ownershipExists",
+                      "signatureExists",
+                      "visualisationExists",
+                      "ownershipProofVerified",
+                      "signatureProofVerified",
+                      "visualisationVerified",
+                    ],
+                    "userExists",
+                  );
+                  return { success: true, data: verificationResult };
+                }
+
+                // Step 2: Find ownership by user id
+                const ownershipResult = await this.ownershipService.getByUserId(
+                  userId,
                   session,
                 );
                 if (!ownershipResult.success || !ownershipResult.data) {
-                  throw new Error("Ownership not found");
+                  verificationResult.ownershipExists = {
+                    status: "failed",
+                    error: "Ownership for user not found",
+                  };
+                  this.blockPoints(
+                    verificationResult,
+                    [
+                      "signatureExists",
+                      "visualisationExists",
+                      "ownershipProofVerified",
+                      "signatureProofVerified",
+                      "visualisationVerified",
+                    ],
+                    "ownershipExists",
+                  );
+                  return { success: true, data: verificationResult };
                 }
-                const ownership = ownershipResult.data;
+                const ownership: Ownership = ownershipResult.data;
 
-                // Step 2: Verify signature exists
+                // Step 3: Verify signature exists
+                let signature: Signature | undefined;
                 const signatureResult = await this.signatureService.getById(
                   ownership.signatureId,
                   session,
                 );
                 if (!signatureResult.success || !signatureResult.data) {
-                  throw new Error("Signature not found");
-                }
-                const signature = signatureResult.data;
-
-                // Step 3: Verify visualisation exists
-                const visualisationResult =
-                  await this.visualisationService.getById(
-                    signature.visualisationId,
-                    true,
-                    session,
+                  verificationResult.signatureExists = {
+                    status: "failed",
+                    error: "Signature not found",
+                  };
+                  this.blockPoints(
+                    verificationResult,
+                    ["visualisationExists", "signatureProofVerified"],
+                    "signatureExists",
                   );
-                if (!visualisationResult.success || !visualisationResult.data) {
-                  throw new Error("Visualisation not found");
-                }
-                const visualisation = visualisationResult.data;
-
-                // Step 4: Verify user exists
-                const userResult = await this.userService.getById(
-                  ownership.userId,
-                  session,
-                );
-                if (!userResult.success || !userResult.data) {
-                  throw new Error("User not found");
+                  this.blockPoints(
+                    verificationResult,
+                    ["visualisationVerified"],
+                    "visualisationExists",
+                  );
+                } else {
+                  signature = signatureResult.data;
                 }
 
-                // Step 5: Verify ownership proof
+                // Step 4: Verify visualisation exists
+                let visualisation: VisualisationDto | undefined;
+                if (signature) {
+                  const visualisationResult =
+                    await this.visualisationService.getById(
+                      signature.visualisationId,
+                      true,
+                      session,
+                    );
+                  if (
+                    !visualisationResult.success ||
+                    !visualisationResult.data
+                  ) {
+                    verificationResult.visualisationExists = {
+                      status: "failed",
+                      error: "Visualisation not found",
+                    };
+                    this.blockPoints(
+                      verificationResult,
+                      ["visualisationVerified"],
+                      "visualisationExists",
+                    );
+                  } else {
+                    visualisation = visualisationResult.data;
+                  }
+                }
+
+                // Step 5: Verify ownership proof (ownership already resolved)
                 const ownershipProofResult =
                   this.ownershipCryptoService.verifyProofSignature(
                     ownership,
@@ -95,35 +182,39 @@ export class OwnershipVerificationService {
                   );
                 if (!ownershipProofResult.success) {
                   verificationResult.ownershipProofVerified = {
-                    success: false,
+                    status: "failed",
                     error: "Ownership proof verification failed",
                   };
                 }
 
-                // Step 6: Verify signature proof
-                const signatureProofResult =
-                  this.signatureCryptoService.verifyProofSignature(
-                    signature,
-                    signature.signatureProof,
-                  );
-                if (!signatureProofResult.success) {
-                  verificationResult.signatureProofVerified = {
-                    success: false,
-                    error: "Signature proof verification failed",
-                  };
+                // Step 6: Verify signature proof (only if signature resolved)
+                if (signature) {
+                  const signatureProofResult =
+                    this.signatureCryptoService.verifyProofSignature(
+                      signature,
+                      signature.signatureProof,
+                    );
+                  if (!signatureProofResult.success) {
+                    verificationResult.signatureProofVerified = {
+                      status: "failed",
+                      error: "Signature proof verification failed",
+                    };
+                  }
                 }
 
-                // Step 7: Verify visualisation using built-in verify method
-                const visualisationVerifyResult =
-                  this.visualisationService.verify(
-                    visualisation._id,
-                    visualisation.data,
-                  );
-                if (!visualisationVerifyResult.success) {
-                  verificationResult.visualisationVerified = {
-                    success: false,
-                    error: "Visualisation verification failed",
-                  };
+                // Step 7: Verify visualisation (only if visualisation resolved)
+                if (visualisation) {
+                  const visualisationVerifyResult =
+                    this.visualisationService.verify(
+                      visualisation._id,
+                      visualisation.data,
+                    );
+                  if (!visualisationVerifyResult.success) {
+                    verificationResult.visualisationVerified = {
+                      status: "failed",
+                      error: "Visualisation verification failed",
+                    };
+                  }
                 }
 
                 return {

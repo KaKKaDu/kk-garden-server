@@ -19,16 +19,22 @@
   "simple-git-hooks": {
     "pre-commit": "npm run check && npm run env-validate && git add ."
   },
+  "overrides": {
+    "mongodb": "$mongodb"
+  },
   "dependencies": {
+    "@better-auth/passkey": "^1.7.5",
     "@fastify/compress": "^8.0.0",
     "@fastify/cors": "^11.2.0",
-    "@kk-garden/shared": "^1.4.2",
+    "@kk-garden/shared": "^1.4.5",
+    "better-auth": "^1.7.5",
     "dotenv": "^17.4.2",
     "fastify": "^5.8.5",
     "fastify-plugin": "^5.1.0",
     "fastify-type-provider-zod": "^6.1.0",
     "mongodb": "^7.3.0",
     "mongoose": "^9.7.1",
+    "resend": "^6.28.1",
     "ulid": "^3.0.2",
     "zod": "^4.4.3"
   },

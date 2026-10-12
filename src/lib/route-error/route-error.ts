@@ -8,19 +8,19 @@ import {
 
 export class HandleRouteError {
   private static handle(data: SuccessData<false>): ErrorResponse {
+    const contexts: string[] = data.errors
+      .filter((err: AppError): boolean => err.context !== undefined)
+      .map((err: AppError): string =>
+        typeof err.context === "string"
+          ? err.context
+          : JSON.stringify(err.context),
+      );
     return {
       statusCode: data.errors.length > 0 ? data.errors[0].status || 500 : 500,
       message: data.errors
-        .map(
-          (err: AppError, index: number): string => `${index}. ${err.message}`,
-        )
+        .map((err: AppError): string => err.message)
         .join(",\n"),
-      context: data.errors
-        .map(
-          (err: AppError, index: number): string =>
-            `${index}. ${JSON.stringify(err.context)}`,
-        )
-        .join(",\n"),
+      ...(contexts.length > 0 ? { context: contexts.join(",\n") } : {}),
     };
   }
 
