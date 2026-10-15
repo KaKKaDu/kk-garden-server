@@ -8,14 +8,18 @@ import { authRoutes } from "@/routes/auth/auth.routes.js";
 import cors from "@fastify/cors";
 import { getEnvService } from "@/services/env/index.js";
 import type { Nullable } from "@kk-garden/shared/types";
+import { parseClientOrigins } from "@/lib/auth/auth-origins.js";
 
 void init(async (app: FastifyInstance) => {
   const rawTrustedOrigins: Nullable<string> =
     getEnvService().getRawEnvValue("CLIENT_ORIGINS");
-  const trustedOrigins: string[] = (rawTrustedOrigins ?? "")
-    .split(",")
-    .map((origin: string): string => origin.trim())
-    .filter((origin: string): boolean => origin.length > 0);
+  if (!rawTrustedOrigins) {
+    throw new Error("CLIENT_ORIGINS is not defined in environment variables");
+  }
+  const trustedOrigins: string[] = parseClientOrigins(
+    rawTrustedOrigins,
+    process.env.NODE_ENV === "production",
+  );
 
   await app
     .withTypeProvider<ZodTypeProvider>()

@@ -6,6 +6,16 @@ import type { ErrorResponse } from "@kk-garden/shared/types";
 import { HandleRouteError } from "@lib/route-error/route-error.js";
 import { getAuthService } from "@/lib/auth/index.js";
 import type { AuthInstance } from "@/lib/auth/auth.js";
+import { Logger } from "@lib/logs/logger.js";
+
+const authEventNames: Record<string, string> = {
+  "/email-otp/send-verification-otp": "auth.otp.requested",
+  "/sign-in/email-otp": "auth.otp.verified",
+  "/passkey/verify-registration": "auth.passkey.registered",
+  "/passkey/verify-authentication": "auth.passkey.sign-in",
+  "/passkey/delete-passkey": "auth.passkey.deleted",
+  "/passkey/update-passkey": "auth.passkey.updated",
+};
 
 export const authCatchAllRoute: RouteFactory = (
   fastify: FastifyInstance,
@@ -27,6 +37,7 @@ export const authCatchAllRoute: RouteFactory = (
 
         const url: URL = new URL(request.url, `http://${request.headers.host}`);
         const headers: Headers = fromNodeHeaders(request.headers);
+        headers.set("x-auth-client-ip", request.ip);
 
         const req: Request = new Request(url.toString(), {
           method: request.method,
@@ -35,6 +46,17 @@ export const authCatchAllRoute: RouteFactory = (
         });
 
         const response: Response = await authResult.data.handler(req);
+        const eventName: string | undefined =
+          authEventNames[url.pathname.replace("/api/auth", "")];
+        if (eventName) {
+          Logger.info(
+            JSON.stringify({
+              event: eventName,
+              outcome: response.status < 400 ? "success" : "failure",
+              statusCode: response.status,
+            }),
+          );
+        }
 
         reply.status(response.status);
         response.headers.forEach((value: string, key: string): void => {

@@ -12,6 +12,7 @@
     "typescript": "tsc --noEmit",
     "check": "tsx scripts/check.ts",
     "env-validate": "tsx scripts/env-validate.ts",
+    "test:auth-rate-limit": "tsx scripts/auth-rate-limit-smoke.ts",
     "signature-key-pair": "tsx scripts/signature-key-pair.ts",
     "shared": "npm install @kk-garden/shared@latest"
   },
@@ -26,7 +27,7 @@
     "@better-auth/passkey": "^1.7.5",
     "@fastify/compress": "^8.0.0",
     "@fastify/cors": "^11.2.0",
-    "@kk-garden/shared": "^1.4.5",
+    "@kk-garden/shared": "^1.4.7",
     "better-auth": "^1.7.5",
     "dotenv": "^17.4.2",
     "fastify": "^5.8.5",

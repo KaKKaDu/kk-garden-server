@@ -24,7 +24,7 @@ export {
   VisualisationPendingDtoMongoSchema,
   parseVisualisationPendingDto,
 } from "./visualisation-pending-dto.mongo.schema.js";
-export { UserMongoSchema, parseUser } from "./user.mongo.schema.js";
+export { parseUser } from "./user.mongo.schema.js";
 export {
   SignatureMongoSchema,
   parseSignature,

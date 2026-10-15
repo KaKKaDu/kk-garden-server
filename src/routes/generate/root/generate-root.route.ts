@@ -12,6 +12,7 @@ import type {
   ErrorResponse,
   GardenDrawData,
   GardenDrawDataDto,
+  VisualisationPendingDto,
 } from "@kk-garden/shared/types";
 import { GardenGenerator } from "@lib/generations/generate/generate-garden.js";
 import { gardenDrawDataTransformer } from "@kk-garden/shared/transformers";
@@ -53,19 +54,29 @@ export const generateRootRoute: RouteFactory = (
           },
         );
 
-        const createPendingVisualisations: SuccessDataAny =
+        const createPendingVisualisations: SuccessDataAny<
+          VisualisationPendingDto[]
+        > =
           await getPendingVisualisationCreationService().createPendingVisualisationsTransaction(
             resolvedPendingId,
             transformedGenerations,
           );
 
-        if (!createPendingVisualisations.success) {
+        if (
+          !createPendingVisualisations.success ||
+          !createPendingVisualisations.data
+        ) {
           throw new Error("Failed to create pending visualisations");
         }
 
         const generationsDto: GenerateRootResponse = {
           constants: GardenGenerator.getGridConstantsDto(),
-          generations: transformedGenerations,
+          generations: createPendingVisualisations.data.map(
+            (visualisation: VisualisationPendingDto) => ({
+              ...visualisation.data,
+              visualisationId: visualisation._id,
+            }),
+          ),
           pendingId: resolvedPendingId,
         };
 

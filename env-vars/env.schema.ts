@@ -11,9 +11,9 @@ export const serverEnvSchema = z.object({
   SIGNATURE_PUBLIC_KEY: z
     .string()
     .min(1, { message: "SIGNATURE_PUBLIC_KEY is required" }),
-  BETTER_AUTH_SECRET: z
-    .string()
-    .min(1, { message: "BETTER_AUTH_SECRET is required" }),
+  BETTER_AUTH_SECRET: z.string().min(32, {
+    message: "BETTER_AUTH_SECRET must contain at least 32 characters",
+  }),
   BETTER_AUTH_URL: z
     .string()
     .min(1, { message: "BETTER_AUTH_URL is required" }),

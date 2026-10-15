@@ -1,4 +1,5 @@
 import { betterAuth, type BetterAuthOptions } from "better-auth";
+import { createAuthMiddleware, freshSessionMiddleware } from "better-auth/api";
 import { mongodbAdapter } from "better-auth/adapters/mongodb";
 import { admin, emailOTP } from "better-auth/plugins";
 import { passkey } from "@better-auth/passkey";
@@ -6,6 +7,11 @@ import { handleError, type SuccessDataAny } from "@kk-garden/shared/errors";
 import type { Nullable } from "@kk-garden/shared/types";
 import { Logger } from "@lib/logs/logger.js";
 import { getAuthDb, type AuthDbBridge } from "@/lib/auth/auth-db.js";
+import {
+  parseClientOrigins,
+  validateAuthBaseUrl,
+} from "@/lib/auth/auth-origins.js";
+import { getAuthSecurityOptions } from "@/lib/auth/auth-security-config.js";
 import { getEnvService } from "@/services/env/index.js";
 import {
   AUTH_EMAIL_OTP_EXPIRES_IN,
@@ -15,10 +21,25 @@ import {
 
 export type AuthInstance = ReturnType<typeof betterAuth>;
 
+const sensitiveAuthPaths: Set<string> = new Set([
+  "/passkey/delete-passkey",
+  "/passkey/update-passkey",
+  "/email-otp/request-email-change",
+]);
+
+const requireFreshSensitiveSession = createAuthMiddleware(
+  async (ctx): Promise<void> => {
+    if (sensitiveAuthPaths.has(ctx.path)) {
+      await freshSessionMiddleware(ctx);
+    }
+  },
+);
+
 // Passkey relying-party settings are tied to the configured client origins.
 export const createAuthInstance = async (): Promise<
   SuccessDataAny<AuthInstance>
 > => {
+  const isProduction: boolean = process.env.NODE_ENV === "production";
   const authDbResult: SuccessDataAny<AuthDbBridge> = await getAuthDb();
 
   if (!authDbResult.success) {
@@ -74,16 +95,17 @@ export const createAuthInstance = async (): Promise<
       );
     }
 
-    const trustedOrigins: string[] = rawTrustedOrigins
-      .split(",")
-      .map((origin: string): string => origin.trim())
-      .filter((origin: string): boolean => origin.length > 0);
+    const trustedOrigins: string[] = parseClientOrigins(
+      rawTrustedOrigins,
+      isProduction,
+    );
     const relyingPartyOrigin: string | undefined = trustedOrigins[0];
 
     if (!relyingPartyOrigin) {
       throw new Error("CLIENT_ORIGINS must contain at least one valid origin");
     }
 
+    const validatedBaseUrl: string = validateAuthBaseUrl(baseURL, isProduction);
     const emailSenderResult = createAuthEmailSender();
     if (!emailSenderResult.success) {
       return { success: false, errors: emailSenderResult.errors };
@@ -96,9 +118,50 @@ export const createAuthInstance = async (): Promise<
     const options: BetterAuthOptions = {
       database: mongodbAdapter(authDb.db, { client: authDb.client }),
       secret,
-      baseURL,
+      baseURL: validatedBaseUrl,
       trustedOrigins,
-      hooks: { after: emailDelivery.after },
+      hooks: {
+        before: requireFreshSensitiveSession,
+        after: emailDelivery.after,
+      },
+      ...getAuthSecurityOptions(isProduction),
+      databaseHooks: {
+        user: {
+          create: {
+            after: async (): Promise<void> => {
+              Logger.info(
+                JSON.stringify({
+                  event: "auth.user.created",
+                  outcome: "success",
+                }),
+              );
+            },
+          },
+        },
+        session: {
+          create: {
+            after: async (_session, context): Promise<void> => {
+              Logger.info(
+                JSON.stringify({
+                  event: "auth.session.created",
+                  outcome: "success",
+                  path: context?.path ?? "unknown",
+                }),
+              );
+            },
+          },
+        },
+      },
+      onAPIError: {
+        onError: async (): Promise<void> => {
+          Logger.error(
+            JSON.stringify({
+              event: "auth.request.failed",
+              outcome: "failure",
+            }),
+          );
+        },
+      },
       user: {
         additionalFields: {
           deletedAt: { type: "date", required: false, input: false },

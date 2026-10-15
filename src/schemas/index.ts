@@ -10,7 +10,7 @@ export {
   VisualisationPendingDtoMongoSchema,
   parseVisualisationPendingDto,
 } from "./models/visualisation-pending-dto.mongo.schema.js";
-export { UserMongoSchema, parseUser } from "./models/user.mongo.schema.js";
+export { parseUser } from "./models/user.mongo.schema.js";
 export {
   SignatureMongoSchema,
   parseSignature,
