@@ -5,6 +5,7 @@ import { generateRoutes } from "@/routes/generate/generate.routes.js";
 import { assignRoutes } from "@/routes/assign/assign.routes.js";
 import { verifyRoutes } from "@/routes/verify/verify.routes.js";
 import { authRoutes } from "@/routes/auth/auth.routes.js";
+import { profileRoutes } from "@/routes/profile/profile.routes.js";
 import cors from "@fastify/cors";
 import { getEnvService } from "@/services/env/index.js";
 import type { Nullable } from "@kk-garden/shared/types";
@@ -25,6 +26,7 @@ void init(async (app: FastifyInstance) => {
     .withTypeProvider<ZodTypeProvider>()
     .register(cors, { origin: trustedOrigins, credentials: true })
     .register(authRoutes, { prefix: "/api/auth" })
+    .register(profileRoutes, { prefix: "/profile" })
     .register(generateRoutes, { prefix: "/generate" })
     .register(assignRoutes, { prefix: "/assign" })
     .register(verifyRoutes, { prefix: "/verify" });

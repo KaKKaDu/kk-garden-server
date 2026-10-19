@@ -27,7 +27,7 @@
     "@better-auth/passkey": "^1.7.5",
     "@fastify/compress": "^8.0.0",
     "@fastify/cors": "^11.2.0",
-    "@kk-garden/shared": "^1.4.7",
+    "@kk-garden/shared": "^1.4.8",
     "better-auth": "^1.7.5",
     "dotenv": "^17.4.2",
     "fastify": "^5.8.5",

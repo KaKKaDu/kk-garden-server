@@ -19,3 +19,7 @@ export {
   OwnershipMongoSchema,
   parseOwnership,
 } from "./models/ownership.mongo.schema.js";
+export {
+  ProfileMongoSchema,
+  parseProfile,
+} from "./models/profile.mongo.schema.js";

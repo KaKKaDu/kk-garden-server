@@ -33,3 +33,4 @@ export {
   OwnershipMongoSchema,
   parseOwnership,
 } from "./ownership.mongo.schema.js";
+export { ProfileMongoSchema, parseProfile } from "./profile.mongo.schema.js";
