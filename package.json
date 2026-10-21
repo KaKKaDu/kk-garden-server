@@ -14,6 +14,7 @@
     "env-validate": "tsx scripts/env-validate.ts",
     "test:auth-rate-limit": "tsx scripts/auth-rate-limit-smoke.ts",
     "test:avatar-storage": "tsx scripts/avatar-storage-smoke.ts",
+    "test:avatar-image": "tsx scripts/avatar-image-smoke.ts",
     "signature-key-pair": "tsx scripts/signature-key-pair.ts",
     "shared": "npm install @kk-garden/shared@latest"
   },
@@ -39,6 +40,7 @@
     "mongodb": "^7.3.0",
     "mongoose": "^9.7.1",
     "resend": "^6.28.1",
+    "sharp": "^0.35.5",
     "ulid": "^3.0.2",
     "zod": "^4.4.3"
   },
