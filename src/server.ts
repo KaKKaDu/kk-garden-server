@@ -10,8 +10,12 @@ import cors from "@fastify/cors";
 import { getEnvService } from "@/services/env/index.ts";
 import type { Nullable } from "@kk-garden/shared/types";
 import { parseClientOrigins } from "@/lib/auth/auth-origins.ts";
+import { getAvatarCleanupService } from "@/services/avatar-cleanup/index.ts";
+
+const avatarCleanupService = getAvatarCleanupService();
 
 void init(async (app: FastifyInstance) => {
+  app.decorate("avatarCleanup", avatarCleanupService);
   const rawTrustedOrigins: Nullable<string> =
     getEnvService().getRawEnvValue("CLIENT_ORIGINS");
   if (!rawTrustedOrigins) {
@@ -34,4 +38,17 @@ void init(async (app: FastifyInstance) => {
     .register(generateRoutes, { prefix: "/generate" })
     .register(assignRoutes, { prefix: "/assign" })
     .register(verifyRoutes, { prefix: "/verify" });
+
+  app.addHook("onReady", async (): Promise<void> => {
+    const result = await avatarCleanupService.start();
+    if (!result.success) {
+      throw new Error("Avatar cleanup could not start");
+    }
+  });
+  app.addHook("onClose", async (): Promise<void> => {
+    const result = await avatarCleanupService.stop();
+    if (!result.success) {
+      throw new Error("Avatar cleanup could not stop");
+    }
+  });
 });

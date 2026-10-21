@@ -21,6 +21,22 @@ export const init = async (
 
   await content(app);
 
+  const close = (): void => {
+    void app.close().then(
+      (): never => process.exit(0),
+      (error: unknown): never => {
+        app.log.error(error, "Server shutdown failed");
+        process.exit(1);
+      },
+    );
+  };
+  process.once("SIGINT", close);
+  process.once("SIGTERM", close);
+  app.addHook("onClose", async (): Promise<void> => {
+    process.removeListener("SIGINT", close);
+    process.removeListener("SIGTERM", close);
+  });
+
   app.listen({ port: 8090, host: "0.0.0.0" }).then(() => {
     // eslint-disable-next-line no-console
     console.log("Server running on http://localhost:8090");

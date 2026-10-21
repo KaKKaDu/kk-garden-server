@@ -379,12 +379,23 @@ export class AvatarStorageRepository {
         config: AvatarStorageConfig,
       ): Promise<AvatarStorageObject> => {
         this.validateObjectKey(objectKey);
-        await client.send(
-          new DeleteObjectCommand({
-            Bucket: config.R2_BUCKET_NAME,
-            Key: objectKey,
-          }),
-        );
+        try {
+          await client.send(
+            new DeleteObjectCommand({
+              Bucket: config.R2_BUCKET_NAME,
+              Key: objectKey,
+            }),
+          );
+        } catch (error: unknown) {
+          if (
+            !(
+              error instanceof S3ServiceException &&
+              error.$metadata.httpStatusCode === 404
+            )
+          ) {
+            throw error;
+          }
+        }
         return { objectKey };
       },
     );
