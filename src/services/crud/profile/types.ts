@@ -6,11 +6,6 @@ export type ProfileUpdateFields = {
   accentHex?: Nullable<Profile["accentHex"]>;
 };
 
-export type ProfileUpdateRateLimit = {
-  allowed: boolean;
-  retryAfterSeconds: number;
-};
-
 export type ProfileLookup = {
   profile: Nullable<Profile>;
 };

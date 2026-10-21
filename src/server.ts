@@ -24,7 +24,11 @@ void init(async (app: FastifyInstance) => {
 
   await app
     .withTypeProvider<ZodTypeProvider>()
-    .register(cors, { origin: trustedOrigins, credentials: true })
+    .register(cors, {
+      origin: trustedOrigins,
+      credentials: true,
+      methods: ["GET", "HEAD", "POST", "PATCH"],
+    })
     .register(authRoutes, { prefix: "/api/auth" })
     .register(profileRoutes, { prefix: "/profile" })
     .register(generateRoutes, { prefix: "/generate" })
