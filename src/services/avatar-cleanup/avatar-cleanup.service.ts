@@ -61,10 +61,17 @@ export class AvatarCleanupService {
       (data.target.kind === "staging" &&
         upload?.state === "pending" &&
         new Date(upload.expiresAt).getTime() > Date.now());
-    const safeAfter: number = upload
+    let safeAfter: number = upload
       ? new Date(upload.updatedAt).getTime() +
         cleanupVariables.get("late-write-grace-ms")
       : 0;
+    if (upload && data.target.kind === "staging") {
+      safeAfter = Math.max(
+        safeAfter,
+        new Date(upload.expiresAt).getTime() +
+          cleanupVariables.get("late-write-grace-ms"),
+      );
+    }
     if (referenced || activeUpload || Date.now() < safeAfter) {
       job.schedule(
         new Date(

@@ -144,6 +144,8 @@ export class AvatarStorageRepository {
 
   async issueUpload(
     contentType: AvatarContentType,
+    objectKey: string = `${avatarStorageVariables.get("staging-prefix")}${randomUUID()}`,
+    issuedAt: number = Date.now(),
   ): Promise<SuccessDataAny<AvatarStorageUpload>> {
     return this.execute(
       "issueUpload",
@@ -153,8 +155,7 @@ export class AvatarStorageRepository {
       ): Promise<AvatarStorageUpload> => {
         const validType: AvatarContentType =
           ProfileAvatarUploadRequestSchema.shape.contentType.parse(contentType);
-        const objectKey: string = `${avatarStorageVariables.get("staging-prefix")}${randomUUID()}`;
-        const issuedAt: number = Date.now();
+        this.validateObjectKey(objectKey, "staging");
         const url: string = await getSignedUrl(
           client,
           new PutObjectCommand({

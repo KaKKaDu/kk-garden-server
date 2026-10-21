@@ -13,8 +13,10 @@ export class AvatarStorageService {
 
   issueUpload(
     contentType: AvatarContentType,
+    objectKey?: string,
+    issuedAt?: number,
   ): Promise<SuccessDataAny<AvatarStorageUpload>> {
-    return this.repository.issueUpload(contentType);
+    return this.repository.issueUpload(contentType, objectKey, issuedAt);
   }
 
   signRead(objectKey: string): Promise<SuccessDataAny<AvatarStorageSignedUrl>> {
