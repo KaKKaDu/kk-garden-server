@@ -1,9 +1,9 @@
-import { ProfileRepository } from "@/services/crud/profile/profile.repository.js";
-import { ProfileService } from "@/services/crud/profile/profile.service.js";
-import { getUserService } from "@/services/crud/user/index.js";
-import type { UserService } from "@/services/crud/user/user.service.js";
-import { getMongoService } from "@/services/mongo/index.js";
-import type { MongoService } from "@/services/mongo/mongo.service.js";
+import { ProfileRepository } from "@/services/crud/profile/profile.repository.ts";
+import { ProfileService } from "@/services/crud/profile/profile.service.ts";
+import { getUserService } from "@/services/crud/user/index.ts";
+import type { UserService } from "@/services/crud/user/user.service.ts";
+import { getMongoService } from "@/services/mongo/index.ts";
+import type { MongoService } from "@/services/mongo/mongo.service.ts";
 
 const mongoService: MongoService = getMongoService();
 const repository: ProfileRepository = new ProfileRepository(mongoService);

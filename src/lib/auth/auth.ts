@@ -5,19 +5,19 @@ import { admin, emailOTP } from "better-auth/plugins";
 import { passkey } from "@better-auth/passkey";
 import { handleError, type SuccessDataAny } from "@kk-garden/shared/errors";
 import type { Nullable } from "@kk-garden/shared/types";
-import { Logger } from "@lib/logs/logger.js";
-import { getAuthDb, type AuthDbBridge } from "@/lib/auth/auth-db.js";
+import { Logger } from "@lib/logs/logger.ts";
+import { getAuthDb, type AuthDbBridge } from "@/lib/auth/auth-db.ts";
 import {
   parseClientOrigins,
   validateAuthBaseUrl,
-} from "@/lib/auth/auth-origins.js";
-import { getAuthSecurityOptions } from "@/lib/auth/auth-security-config.js";
-import { getEnvService } from "@/services/env/index.js";
+} from "@/lib/auth/auth-origins.ts";
+import { getAuthSecurityOptions } from "@/lib/auth/auth-security-config.ts";
+import { getEnvService } from "@/services/env/index.ts";
 import {
-  AUTH_EMAIL_OTP_EXPIRES_IN,
+  authEmailVariables,
   createAuthEmailDelivery,
   createAuthEmailSender,
-} from "@/lib/auth/auth-email.js";
+} from "@/lib/auth/auth-email.ts";
 
 export type AuthInstance = ReturnType<typeof betterAuth>;
 
@@ -194,7 +194,7 @@ export const createAuthInstance = async (): Promise<
           sendVerificationOTP: emailDelivery.sendVerificationOTP,
           disableSignUp: true,
           otpLength: 6,
-          expiresIn: AUTH_EMAIL_OTP_EXPIRES_IN,
+          expiresIn: authEmailVariables.get("otp-expires-in"),
           allowedAttempts: 3,
           storeOTP: "hashed",
           resendStrategy: "rotate",

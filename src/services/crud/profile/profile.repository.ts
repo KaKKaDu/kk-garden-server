@@ -8,24 +8,28 @@ import {
 } from "@kk-garden/shared/schemas";
 import type { Nullable, Profile } from "@kk-garden/shared/types";
 import type { ClientSession, Model, Mongoose, UpdateQuery } from "mongoose";
-import { parseProfile, ProfileMongoSchema } from "@/schemas/models/index.js";
-import type { MongoService } from "@/services/mongo/mongo.service.js";
+import { parseProfile, ProfileMongoSchema } from "@/schemas/models/index.ts";
+import type { MongoService } from "@/services/mongo/mongo.service.ts";
 import type {
   ProfileAvatarReferenceChange,
   ProfileLookup,
   ProfileUpdateFields,
-} from "@/services/crud/profile/types.js";
-import { transactional, type DocumentLike } from "@/types/mongo.types.js";
+} from "@/services/crud/profile/types.ts";
+import { transactional, type DocumentLike } from "@/types/mongo.types.ts";
 
-const PROFILE_MODEL_NAME: string = "Profile";
-const PROFILE_COLLECTION_NAME: string = "profiles";
+import { Variables } from "@lib/variables/variables.ts";
+
+const profileVariables = Variables.of({
+  "model-name": "Profile",
+  "collection-name": "profiles",
+} as const);
 
 export class ProfileRepository {
   constructor(private readonly mongoService: MongoService) {}
 
   private getModel(db: Mongoose): Model<Profile> {
     const existingModel: Nullable<Model<Profile>> = db.models[
-      PROFILE_MODEL_NAME
+      profileVariables.get("model-name")
     ] as Nullable<Model<Profile>>;
 
     if (existingModel) {
@@ -33,9 +37,9 @@ export class ProfileRepository {
     }
 
     return db.model<Profile>(
-      PROFILE_MODEL_NAME,
+      profileVariables.get("model-name"),
       ProfileMongoSchema,
-      PROFILE_COLLECTION_NAME,
+      profileVariables.get("collection-name"),
     );
   }
 

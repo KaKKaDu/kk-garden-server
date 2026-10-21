@@ -7,20 +7,24 @@ import type { ClientSession, Model, Mongoose } from "mongoose";
 import {
   parseVisualisationPendingDto,
   VisualisationPendingDtoMongoSchema,
-} from "@/schemas/models/index.js";
-import type { MongoService } from "@/services/mongo/mongo.service.js";
-import type { CreateVisualisationPendingPayload } from "@/services/crud/visualisation-pending/types.js";
-import { transactional, type DocumentLike } from "@/types/mongo.types.js";
+} from "@/schemas/models/index.ts";
+import type { MongoService } from "@/services/mongo/mongo.service.ts";
+import type { CreateVisualisationPendingPayload } from "@/services/crud/visualisation-pending/types.ts";
+import { transactional, type DocumentLike } from "@/types/mongo.types.ts";
 
-const VISUALISATION_PENDING_MODEL_NAME: string = "VisualisationPendingDto";
-const VISUALISATION_PENDING_COLLECTION_NAME: string = "visualisations_pending";
+import { Variables } from "@lib/variables/variables.ts";
+
+const visualisationPendingVariables = Variables.of({
+  "model-name": "VisualisationPendingDto",
+  "collection-name": "visualisations_pending",
+} as const);
 
 export class VisualisationPendingRepository {
   constructor(private readonly mongoService: MongoService) {}
 
   private getModel(db: Mongoose): Model<VisualisationPendingDto> {
     const existingModel: Nullable<Model<VisualisationPendingDto>> = db.models[
-      VISUALISATION_PENDING_MODEL_NAME
+      visualisationPendingVariables.get("model-name")
     ] as Nullable<Model<VisualisationPendingDto>>;
 
     if (existingModel) {
@@ -28,9 +32,9 @@ export class VisualisationPendingRepository {
     }
 
     return db.model<VisualisationPendingDto>(
-      VISUALISATION_PENDING_MODEL_NAME,
+      visualisationPendingVariables.get("model-name"),
       VisualisationPendingDtoMongoSchema,
-      VISUALISATION_PENDING_COLLECTION_NAME,
+      visualisationPendingVariables.get("collection-name"),
     );
   }
 

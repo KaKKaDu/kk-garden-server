@@ -10,15 +10,15 @@ import {
 import type { ProfileOwnerResponse } from "@kk-garden/shared/schemas";
 import type { ClientSession } from "mongoose";
 import type { Nullable, Profile, User } from "@kk-garden/shared/types";
-import type { ProfileRepository } from "@/services/crud/profile/profile.repository.js";
+import type { ProfileRepository } from "@/services/crud/profile/profile.repository.ts";
 import type {
   ProfileAvatarReferenceChange,
   ProfileLookup,
   ProfileUpdateFields,
-} from "@/services/crud/profile/types.js";
-import type { UserService } from "@/services/crud/user/user.service.js";
-import { transactional } from "@/types/mongo.types.js";
-import { Logger } from "@lib/logs/logger.js";
+} from "@/services/crud/profile/types.ts";
+import type { UserService } from "@/services/crud/user/user.service.ts";
+import { transactional } from "@/types/mongo.types.ts";
+import { Logger } from "@lib/logs/logger.ts";
 
 export class ProfileService {
   constructor(

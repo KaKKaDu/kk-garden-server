@@ -1,11 +1,11 @@
-import type { CryptoService } from "@/services/crypto/crypto.service.js";
-import { getSignatureCryptoService } from "@/services/crypto/index.js";
-import { getMongoService } from "@/services/mongo/index.js";
-import { SignatureRepository } from "@/services/crud/signature/signature.repository.js";
-import { SignatureService } from "@/services/crud/signature/signature.service.js";
-import { getVisualisationService } from "@/services/crud/visualisation/index.js";
+import type { CryptoService } from "@/services/crypto/crypto.service.ts";
+import { getSignatureCryptoService } from "@/services/crypto/index.ts";
+import { getMongoService } from "@/services/mongo/index.ts";
+import { SignatureRepository } from "@/services/crud/signature/signature.repository.ts";
+import { SignatureService } from "@/services/crud/signature/signature.service.ts";
+import { getVisualisationService } from "@/services/crud/visualisation/index.ts";
 import type { Signature } from "@kk-garden/shared/types";
-import type { MongoService } from "@/services/mongo/mongo.service.js";
+import type { MongoService } from "@/services/mongo/mongo.service.ts";
 
 const mongoService: MongoService = getMongoService();
 const signatureCryptoService: CryptoService<Signature> =

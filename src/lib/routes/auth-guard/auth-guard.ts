@@ -2,9 +2,9 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { fromNodeHeaders } from "better-auth/node";
 import { AppError, handleError } from "@kk-garden/shared/errors";
 import type { ErrorResponse } from "@kk-garden/shared/types";
-import { getAuthService } from "@/lib/auth/index.js";
-import { HandleRouteError } from "@lib/route-error/route-error.js";
-import { Logger } from "@lib/logs/logger.js";
+import { getAuthService } from "@/lib/auth/index.ts";
+import { HandleRouteError } from "@lib/route-error/route-error.ts";
+import { Logger } from "@lib/logs/logger.ts";
 
 export const authGuard = async (
   request: FastifyRequest,

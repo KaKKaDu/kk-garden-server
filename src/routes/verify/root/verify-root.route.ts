@@ -1,4 +1,4 @@
-import type { RouteFactory } from "@/types/route.types.js";
+import type { RouteFactory } from "@/types/route.types.ts";
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import {
@@ -7,12 +7,12 @@ import {
   VerifyRootResponseSchema,
   ErrorSchema,
 } from "@kk-garden/shared/schemas";
-import { HandleRouteError } from "@lib/route-error/route-error.js";
+import { HandleRouteError } from "@lib/route-error/route-error.ts";
 import type {
   ErrorResponse,
   OwnershipVerificationResult,
 } from "@kk-garden/shared/types";
-import { getOwnershipVerificationService } from "@/services/transactions/ownership-verification/index.js";
+import { getOwnershipVerificationService } from "@/services/transactions/ownership-verification/index.ts";
 import type { SuccessDataAny } from "@kk-garden/shared/errors";
 
 export const verifyRootRoute: RouteFactory = (

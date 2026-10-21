@@ -8,12 +8,12 @@ import type {
   VisualisationDto,
 } from "@kk-garden/shared/types";
 import type { SuccessDataAny } from "@kk-garden/shared/errors";
-import type { MongoService } from "@/services/mongo/mongo.service.js";
-import type { OwnershipService } from "@/services/crud/ownership/ownership.service.js";
-import type { SignatureService } from "@/services/crud/signature/signature.service.js";
-import type { VisualisationService } from "@/services/crud/visualisation/visualisation.service.js";
-import type { UserService } from "@/services/crud/user/user.service.js";
-import type { CryptoService } from "@/services/crypto/crypto.service.js";
+import type { MongoService } from "@/services/mongo/mongo.service.ts";
+import type { OwnershipService } from "@/services/crud/ownership/ownership.service.ts";
+import type { SignatureService } from "@/services/crud/signature/signature.service.ts";
+import type { VisualisationService } from "@/services/crud/visualisation/visualisation.service.ts";
+import type { UserService } from "@/services/crud/user/user.service.ts";
+import type { CryptoService } from "@/services/crypto/crypto.service.ts";
 
 type VerificationPointKey = keyof OwnershipVerificationResult;
 

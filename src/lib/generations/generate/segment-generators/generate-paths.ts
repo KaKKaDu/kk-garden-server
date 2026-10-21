@@ -18,9 +18,9 @@ import {
   TilesSpritesheetSet,
 } from "@kk-garden/shared/sets";
 import { GridSimulator } from "@lib/generations/grid-simulator/grid-simulator.ts";
-import { PathSimulator } from "@lib/generations/path-simulator/path-simulator.js";
-import type { GeneratedPathsDrawData } from "@lib/generations/generate/draw-data.types.js";
-import { generateStaticReport } from "@lib/generations/reports/static-report.js";
+import { PathSimulator } from "@lib/generations/path-simulator/path-simulator.ts";
+import type { GeneratedPathsDrawData } from "@lib/generations/generate/draw-data.types.ts";
+import { generateStaticReport } from "@lib/generations/reports/static-report.ts";
 
 export class PathsLayerGenerator {
   private readonly consts: GridConstants;

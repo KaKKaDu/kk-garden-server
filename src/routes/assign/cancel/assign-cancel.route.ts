@@ -1,4 +1,4 @@
-import type { RouteFactory } from "@/types/route.types.js";
+import type { RouteFactory } from "@/types/route.types.ts";
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import {
@@ -6,9 +6,9 @@ import {
   AssignCancelResponseSchema,
   ErrorSchema,
 } from "@kk-garden/shared/schemas";
-import { HandleRouteError } from "@lib/route-error/route-error.js";
+import { HandleRouteError } from "@lib/route-error/route-error.ts";
 import type { ErrorResponse } from "@kk-garden/shared/types";
-import { getVisualisationPendingService } from "@/services/crud/visualisation-pending/index.js";
+import { getVisualisationPendingService } from "@/services/crud/visualisation-pending/index.ts";
 import type { SuccessDataAny } from "@kk-garden/shared/errors";
 
 export const assignCancelRoute: RouteFactory = (

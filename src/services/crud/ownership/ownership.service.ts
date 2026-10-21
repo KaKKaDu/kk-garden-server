@@ -2,12 +2,12 @@ import { handleError, type SuccessDataAny } from "@kk-garden/shared/errors";
 import type { Nullable, Ownership } from "@kk-garden/shared/types";
 import type { ClientSession } from "mongoose";
 import crypto from "node:crypto";
-import type { CryptoService } from "@/services/crypto/crypto.service.js";
-import type { OwnershipRepository } from "@/services/crud/ownership/ownership.repository.js";
-import type { CreateOwnershipPayload } from "@/services/crud/ownership/types.js";
-import type { SignatureService } from "@/services/crud/signature/signature.service.js";
-import { transactional } from "@/types/mongo.types.js";
-import type { UserService } from "@/services/crud/user/user.service.js";
+import type { CryptoService } from "@/services/crypto/crypto.service.ts";
+import type { OwnershipRepository } from "@/services/crud/ownership/ownership.repository.ts";
+import type { CreateOwnershipPayload } from "@/services/crud/ownership/types.ts";
+import type { SignatureService } from "@/services/crud/signature/signature.service.ts";
+import { transactional } from "@/types/mongo.types.ts";
+import type { UserService } from "@/services/crud/user/user.service.ts";
 
 export class OwnershipService {
   constructor(

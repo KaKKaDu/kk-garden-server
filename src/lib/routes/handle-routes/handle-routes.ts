@@ -1,4 +1,4 @@
-import type { RouteFactory } from "@/types/route.types.js";
+import type { RouteFactory } from "@/types/route.types.ts";
 import type { FastifyInstance } from "fastify";
 import {
   AppError,

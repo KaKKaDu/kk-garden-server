@@ -1,16 +1,16 @@
-import { getVisualisationService } from "@/services/crud/visualisation/index.js";
-import type { VisualisationService } from "@/services/crud/visualisation/visualisation.service.js";
-import { getVisualisationPendingService } from "@/services/crud/visualisation-pending/index.js";
-import type { VisualisationPendingService } from "@/services/crud/visualisation-pending/visualisation-pending.service.js";
-import { getUserService } from "@/services/crud/user/index.js";
-import type { UserService } from "@/services/crud/user/user.service.js";
-import type { SignatureService } from "@/services/crud/signature/signature.service.js";
-import { getSignatureService } from "@/services/crud/signature/index.js";
-import type { OwnershipService } from "@/services/crud/ownership/ownership.service.js";
-import { getOwnershipService } from "@/services/crud/ownership/index.js";
-import type { MongoService } from "@/services/mongo/mongo.service.js";
-import { getMongoService } from "@/services/mongo/index.js";
-import { OwnershipCreationService } from "@/services/transactions/ownership-creation/ownership-creation.service.js";
+import { getVisualisationService } from "@/services/crud/visualisation/index.ts";
+import type { VisualisationService } from "@/services/crud/visualisation/visualisation.service.ts";
+import { getVisualisationPendingService } from "@/services/crud/visualisation-pending/index.ts";
+import type { VisualisationPendingService } from "@/services/crud/visualisation-pending/visualisation-pending.service.ts";
+import { getUserService } from "@/services/crud/user/index.ts";
+import type { UserService } from "@/services/crud/user/user.service.ts";
+import type { SignatureService } from "@/services/crud/signature/signature.service.ts";
+import { getSignatureService } from "@/services/crud/signature/index.ts";
+import type { OwnershipService } from "@/services/crud/ownership/ownership.service.ts";
+import { getOwnershipService } from "@/services/crud/ownership/index.ts";
+import type { MongoService } from "@/services/mongo/mongo.service.ts";
+import { getMongoService } from "@/services/mongo/index.ts";
+import { OwnershipCreationService } from "@/services/transactions/ownership-creation/ownership-creation.service.ts";
 
 const visualisationService: VisualisationService = getVisualisationService();
 const visualisationPendingService: VisualisationPendingService =

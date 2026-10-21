@@ -6,11 +6,11 @@ import type {
   VisualisationPendingDto,
 } from "@kk-garden/shared/types";
 import type { ClientSession } from "mongoose";
-import type { VisualisationPendingRepository } from "@/services/crud/visualisation-pending/visualisation-pending.repository.js";
-import type { CreateVisualisationPendingPayload } from "@/services/crud/visualisation-pending/types.js";
-import type { CreateVisualisationPayload } from "@/services/crud/visualisation/types.js";
-import type { VisualisationService } from "@/services/crud/visualisation/visualisation.service.js";
-import { transactional } from "@/types/mongo.types.js";
+import type { VisualisationPendingRepository } from "@/services/crud/visualisation-pending/visualisation-pending.repository.ts";
+import type { CreateVisualisationPendingPayload } from "@/services/crud/visualisation-pending/types.ts";
+import type { CreateVisualisationPayload } from "@/services/crud/visualisation/types.ts";
+import type { VisualisationService } from "@/services/crud/visualisation/visualisation.service.ts";
+import { transactional } from "@/types/mongo.types.ts";
 
 export class VisualisationPendingService {
   constructor(

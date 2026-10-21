@@ -1,10 +1,10 @@
 import type { SpriteDataDto } from "@kk-garden/shared/types";
 import { Schema } from "mongoose";
-import { AnimatedSpriteDtoMongoSchema } from "./animated-sprite-dto.mongo.schema.js";
+import { AnimatedSpriteDtoMongoSchema } from "./animated-sprite-dto.mongo.schema.ts";
 import {
   CellMongoSchema,
   CoordinatesMongoSchema,
-} from "./common.mongo.schema.js";
+} from "./common.mongo.schema.ts";
 
 export const SpriteDataDtoMongoSchema = new Schema<SpriteDataDto>(
   {

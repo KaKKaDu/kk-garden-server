@@ -1,4 +1,4 @@
-import type { AuthInstance } from "@/lib/auth/auth.js";
+import type { AuthInstance } from "@/lib/auth/auth.ts";
 
 type AuthSession = NonNullable<
   Awaited<ReturnType<AuthInstance["api"]["getSession"]>>

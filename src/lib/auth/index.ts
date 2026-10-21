@@ -1,5 +1,5 @@
 import type { SuccessDataAny } from "@kk-garden/shared/errors";
-import { createAuthInstance, type AuthInstance } from "@/lib/auth/auth.js";
+import { createAuthInstance, type AuthInstance } from "@/lib/auth/auth.ts";
 
 const globalWithAuth = globalThis as unknown as {
   authInstancePromise: Promise<SuccessDataAny<AuthInstance>> | undefined;

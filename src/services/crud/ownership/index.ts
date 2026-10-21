@@ -1,11 +1,11 @@
-import { getOwnershipCryptoService } from "@/services/crypto/index.js";
-import type { MongoService } from "@/services/mongo/mongo.service.js";
-import { getMongoService } from "@/services/mongo/index.js";
-import { OwnershipRepository } from "@/services/crud/ownership/ownership.repository.js";
-import { OwnershipService } from "@/services/crud/ownership/ownership.service.js";
-import { getSignatureService } from "@/services/crud/signature/index.js";
-import { getUserService } from "@/services/crud/user/index.js";
-import type { CryptoService } from "@/services/crypto/crypto.service.js";
+import { getOwnershipCryptoService } from "@/services/crypto/index.ts";
+import type { MongoService } from "@/services/mongo/mongo.service.ts";
+import { getMongoService } from "@/services/mongo/index.ts";
+import { OwnershipRepository } from "@/services/crud/ownership/ownership.repository.ts";
+import { OwnershipService } from "@/services/crud/ownership/ownership.service.ts";
+import { getSignatureService } from "@/services/crud/signature/index.ts";
+import { getUserService } from "@/services/crud/user/index.ts";
+import type { CryptoService } from "@/services/crypto/crypto.service.ts";
 import type { Ownership } from "@kk-garden/shared/types";
 
 const mongoService: MongoService = getMongoService();

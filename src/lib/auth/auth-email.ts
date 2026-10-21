@@ -7,10 +7,14 @@ import {
   type SuccessDataAny,
 } from "@kk-garden/shared/errors";
 import type { Nullable } from "@kk-garden/shared/types";
-import { getEnvService } from "@/services/env/index.js";
-import { Logger } from "@lib/logs/logger.js";
+import { getEnvService } from "@/services/env/index.ts";
+import { Logger } from "@lib/logs/logger.ts";
 
-export const AUTH_EMAIL_OTP_EXPIRES_IN: number = 300;
+import { Variables } from "@lib/variables/variables.ts";
+
+export const authEmailVariables = Variables.of({
+  "otp-expires-in": 300,
+} as const);
 
 type SendVerificationOTP = Parameters<
   typeof emailOTP
@@ -50,7 +54,7 @@ export const createAuthEmailSender = (): SuccessDataAny<AuthEmailSender> => {
           text: [
             `Your kk-garden code is: ${otp}`,
             "",
-            `This code expires in ${AUTH_EMAIL_OTP_EXPIRES_IN / 60} minutes and can only be used once.`,
+            `This code expires in ${authEmailVariables.get("otp-expires-in") / 60} minutes and can only be used once.`,
             "Do not share this code with anyone.",
             "",
             "If you did not request this code, you can ignore this email.",

@@ -1,15 +1,15 @@
-import { init } from "@/init.js";
+import { init } from "@/init.ts";
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
-import { generateRoutes } from "@/routes/generate/generate.routes.js";
-import { assignRoutes } from "@/routes/assign/assign.routes.js";
-import { verifyRoutes } from "@/routes/verify/verify.routes.js";
-import { authRoutes } from "@/routes/auth/auth.routes.js";
-import { profileRoutes } from "@/routes/profile/profile.routes.js";
+import { generateRoutes } from "@/routes/generate/generate.routes.ts";
+import { assignRoutes } from "@/routes/assign/assign.routes.ts";
+import { verifyRoutes } from "@/routes/verify/verify.routes.ts";
+import { authRoutes } from "@/routes/auth/auth.routes.ts";
+import { profileRoutes } from "@/routes/profile/profile.routes.ts";
 import cors from "@fastify/cors";
-import { getEnvService } from "@/services/env/index.js";
+import { getEnvService } from "@/services/env/index.ts";
 import type { Nullable } from "@kk-garden/shared/types";
-import { parseClientOrigins } from "@/lib/auth/auth-origins.js";
+import { parseClientOrigins } from "@/lib/auth/auth-origins.ts";
 
 void init(async (app: FastifyInstance) => {
   const rawTrustedOrigins: Nullable<string> =

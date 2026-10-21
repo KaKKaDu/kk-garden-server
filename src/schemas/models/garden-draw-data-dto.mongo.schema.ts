@@ -1,9 +1,9 @@
 import { GardenDrawDataDtoSchema } from "@kk-garden/shared/schemas";
 import type { GardenDrawDataDto } from "@kk-garden/shared/types";
 import { Schema } from "mongoose";
-import { GridDrawerElementWithIdMongoSchema } from "./grid-drawer-element.mongo.schema.js";
-import { SpriteDataDtoMongoSchema } from "./sprite-data-dto.mongo.schema.js";
-import { SpritesheetSetDtoMongoSchema } from "./spritesheet-set-dto.mongo.schema.js";
+import { GridDrawerElementWithIdMongoSchema } from "./grid-drawer-element.mongo.schema.ts";
+import { SpriteDataDtoMongoSchema } from "./sprite-data-dto.mongo.schema.ts";
+import { SpritesheetSetDtoMongoSchema } from "./spritesheet-set-dto.mongo.schema.ts";
 
 type GardenDrawDataStaticDto = GardenDrawDataDto["staticData"];
 type GardenDrawDataAnimatedDto = GardenDrawDataDto["animatedData"];

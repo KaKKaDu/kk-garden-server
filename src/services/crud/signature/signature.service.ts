@@ -2,11 +2,11 @@ import { handleError, type SuccessDataAny } from "@kk-garden/shared/errors";
 import type { Nullable, Signature } from "@kk-garden/shared/types";
 import type { ClientSession } from "mongoose";
 import crypto from "node:crypto";
-import type { CryptoService } from "@/services/crypto/crypto.service.js";
-import type { SignatureRepository } from "@/services/crud/signature/signature.repository.js";
-import type { CreateSignaturePayload } from "@/services/crud/signature/types.js";
-import type { VisualisationService } from "@/services/crud/visualisation/visualisation.service.js";
-import { transactional } from "@/types/mongo.types.js";
+import type { CryptoService } from "@/services/crypto/crypto.service.ts";
+import type { SignatureRepository } from "@/services/crud/signature/signature.repository.ts";
+import type { CreateSignaturePayload } from "@/services/crud/signature/types.ts";
+import type { VisualisationService } from "@/services/crud/visualisation/visualisation.service.ts";
+import { transactional } from "@/types/mongo.types.ts";
 import { ulid } from "ulid";
 
 export class SignatureService {

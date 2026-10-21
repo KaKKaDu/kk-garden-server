@@ -1,4 +1,4 @@
-import { CryptoRepository } from "@/services/crypto/crypto.repository.js";
-import { getEnvService } from "@/services/env/index.js";
+import { CryptoRepository } from "@/services/crypto/crypto.repository.ts";
+import { getEnvService } from "@/services/env/index.ts";
 
 export const cryptoRepositorySingleton = new CryptoRepository(getEnvService());

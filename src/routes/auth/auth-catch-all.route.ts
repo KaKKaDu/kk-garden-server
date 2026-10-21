@@ -1,12 +1,12 @@
-import type { RouteFactory } from "@/types/route.types.js";
+import type { RouteFactory } from "@/types/route.types.ts";
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { fromNodeHeaders } from "better-auth/node";
 import type { SuccessDataAny } from "@kk-garden/shared/errors";
 import type { ErrorResponse } from "@kk-garden/shared/types";
-import { HandleRouteError } from "@lib/route-error/route-error.js";
-import { getAuthService } from "@/lib/auth/index.js";
-import type { AuthInstance } from "@/lib/auth/auth.js";
-import { Logger } from "@lib/logs/logger.js";
+import { HandleRouteError } from "@lib/route-error/route-error.ts";
+import { getAuthService } from "@/lib/auth/index.ts";
+import type { AuthInstance } from "@/lib/auth/auth.ts";
+import { Logger } from "@lib/logs/logger.ts";
 
 const authEventNames: Record<string, string> = {
   "/email-otp/send-verification-otp": "auth.otp.requested",

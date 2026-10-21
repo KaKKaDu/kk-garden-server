@@ -1,8 +1,8 @@
 import mongoose, { Mongoose } from "mongoose";
 import { handleError, type SuccessDataAny } from "@kk-garden/shared/errors";
 import type { Nullable } from "@kk-garden/shared/types";
-import { Logger } from "@lib/logs/logger.js";
-import { getEnvService } from "@/services/env/index.js";
+import { Logger } from "@lib/logs/logger.ts";
+import { getEnvService } from "@/services/env/index.ts";
 
 export class MongoRepository {
   private connection: Nullable<Mongoose> = null;

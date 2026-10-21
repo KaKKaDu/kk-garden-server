@@ -13,6 +13,7 @@
     "check": "tsx scripts/check.ts",
     "env-validate": "tsx scripts/env-validate.ts",
     "test:auth-rate-limit": "tsx scripts/auth-rate-limit-smoke.ts",
+    "test:avatar-storage": "tsx scripts/avatar-storage-smoke.ts",
     "signature-key-pair": "tsx scripts/signature-key-pair.ts",
     "shared": "npm install @kk-garden/shared@latest"
   },
@@ -24,6 +25,8 @@
     "mongodb": "$mongodb"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1154.0",
+    "@aws-sdk/s3-request-presigner": "^3.1154.0",
     "@better-auth/passkey": "^1.7.5",
     "@fastify/compress": "^8.0.0",
     "@fastify/cors": "^11.2.0",

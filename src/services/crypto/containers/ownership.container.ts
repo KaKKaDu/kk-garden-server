@@ -1,9 +1,9 @@
-import type { PayloadNormaliser } from "@/services/crypto/types.js";
+import type { PayloadNormaliser } from "@/services/crypto/types.ts";
 import type { Ownership } from "@kk-garden/shared/types";
 import { handleError, type SuccessDataAny } from "@kk-garden/shared/errors";
 import { OwnershipSchema } from "@kk-garden/shared/schemas";
-import { cryptoRepositorySingleton } from "@/services/crypto/containers/crypto.container.js";
-import { CryptoService } from "@/services/crypto/crypto.service.js";
+import { cryptoRepositorySingleton } from "@/services/crypto/containers/crypto.container.ts";
+import { CryptoService } from "@/services/crypto/crypto.service.ts";
 
 const ownershipPayloadNormaliser: PayloadNormaliser<Ownership> = (
   payload: Ownership,

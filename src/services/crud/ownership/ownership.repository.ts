@@ -4,20 +4,24 @@ import type { ClientSession, Model, Mongoose } from "mongoose";
 import {
   OwnershipMongoSchema,
   parseOwnership,
-} from "@/schemas/models/index.js";
-import type { MongoService } from "@/services/mongo/mongo.service.js";
-import type { CreateOwnershipPayload } from "@/services/crud/ownership/types.js";
-import { transactional, type DocumentLike } from "@/types/mongo.types.js";
+} from "@/schemas/models/index.ts";
+import type { MongoService } from "@/services/mongo/mongo.service.ts";
+import type { CreateOwnershipPayload } from "@/services/crud/ownership/types.ts";
+import { transactional, type DocumentLike } from "@/types/mongo.types.ts";
 
-const OWNERSHIP_MODEL_NAME: string = "Ownership";
-const OWNERSHIP_COLLECTION_NAME: string = "ownerships";
+import { Variables } from "@lib/variables/variables.ts";
+
+const ownershipVariables = Variables.of({
+  "model-name": "Ownership",
+  "collection-name": "ownerships",
+} as const);
 
 export class OwnershipRepository {
   constructor(private readonly mongoService: MongoService) {}
 
   private getModel(db: Mongoose): Model<Ownership> {
     const existingModel: Nullable<Model<Ownership>> = db.models[
-      OWNERSHIP_MODEL_NAME
+      ownershipVariables.get("model-name")
     ] as Nullable<Model<Ownership>>;
 
     if (existingModel) {
@@ -25,9 +29,9 @@ export class OwnershipRepository {
     }
 
     return db.model<Ownership>(
-      OWNERSHIP_MODEL_NAME,
+      ownershipVariables.get("model-name"),
       OwnershipMongoSchema,
-      OWNERSHIP_COLLECTION_NAME,
+      ownershipVariables.get("collection-name"),
     );
   }
 

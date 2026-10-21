@@ -4,20 +4,24 @@ import type { ClientSession, Mongoose, Model } from "mongoose";
 import {
   VisualisationDtoMongoSchema,
   parseVisualisationDto,
-} from "@/schemas/models/index.js";
-import type { MongoService } from "@/services/mongo/mongo.service.js";
-import type { CreateVisualisationPayload } from "@/services/crud/visualisation/types.js";
-import { transactional, type DocumentLike } from "@/types/mongo.types.js";
+} from "@/schemas/models/index.ts";
+import type { MongoService } from "@/services/mongo/mongo.service.ts";
+import type { CreateVisualisationPayload } from "@/services/crud/visualisation/types.ts";
+import { transactional, type DocumentLike } from "@/types/mongo.types.ts";
 
-const VISUALISATION_MODEL_NAME: string = "VisualisationDto";
-const VISUALISATION_COLLECTION_NAME: string = "visualisations";
+import { Variables } from "@lib/variables/variables.ts";
+
+const visualisationVariables = Variables.of({
+  "model-name": "VisualisationDto",
+  "collection-name": "visualisations",
+} as const);
 
 export class VisualisationRepository {
   constructor(private readonly mongoService: MongoService) {}
 
   private getModel(db: Mongoose): Model<VisualisationDto> {
     const existingModel: Nullable<Model<VisualisationDto>> = db.models[
-      VISUALISATION_MODEL_NAME
+      visualisationVariables.get("model-name")
     ] as Nullable<Model<VisualisationDto>>;
 
     if (existingModel) {
@@ -25,9 +29,9 @@ export class VisualisationRepository {
     }
 
     return db.model<VisualisationDto>(
-      VISUALISATION_MODEL_NAME,
+      visualisationVariables.get("model-name"),
       VisualisationDtoMongoSchema,
-      VISUALISATION_COLLECTION_NAME,
+      visualisationVariables.get("collection-name"),
     );
   }
 

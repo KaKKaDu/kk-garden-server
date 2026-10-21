@@ -4,9 +4,9 @@ import {
   CellMongoSchema,
   CoordinatesMongoSchema,
   SizeMeasuresMongoSchema,
-} from "./common.mongo.schema.js";
-import { SpritesheetElementMongoSchema } from "./spritesheet-element.mongo.schema.js";
-import { SpritesheetPathMongoField } from "./spritesheet-path.mongo.schema.js";
+} from "./common.mongo.schema.ts";
+import { SpritesheetElementMongoSchema } from "./spritesheet-element.mongo.schema.ts";
+import { SpritesheetPathMongoField } from "./spritesheet-path.mongo.schema.ts";
 
 export const GridDrawerElementMongoSchema = new Schema<GridDrawerElement>(
   {

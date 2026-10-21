@@ -21,7 +21,7 @@ import { ObjectsLayerGenerator } from "@lib/generations/generate/segment-generat
 import {
   generationsConfig,
   type GardenGeneratorConfig,
-} from "@lib/generations/generations-config.js";
+} from "@lib/generations/generations-config.ts";
 
 export class GardenGenerator {
   private static readonly config: GardenGeneratorConfig = generationsConfig;

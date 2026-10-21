@@ -1,7 +1,7 @@
 import { VisualisationPendingDtoSchema } from "@kk-garden/shared/schemas";
 import type { VisualisationPendingDto } from "@kk-garden/shared/types";
 import { Schema } from "mongoose";
-import { GardenDrawDataDtoMongoSchema } from "@/schemas/index.js";
+import { GardenDrawDataDtoMongoSchema } from "@/schemas/index.ts";
 
 export const VisualisationPendingDtoMongoSchema =
   new Schema<VisualisationPendingDto>(

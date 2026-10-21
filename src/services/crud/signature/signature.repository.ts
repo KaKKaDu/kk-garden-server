@@ -4,20 +4,24 @@ import type { ClientSession, Model, Mongoose } from "mongoose";
 import {
   SignatureMongoSchema,
   parseSignature,
-} from "@/schemas/models/index.js";
-import type { MongoService } from "@/services/mongo/mongo.service.js";
-import type { CreateSignaturePayload } from "@/services/crud/signature/types.js";
-import { transactional, type DocumentLike } from "@/types/mongo.types.js";
+} from "@/schemas/models/index.ts";
+import type { MongoService } from "@/services/mongo/mongo.service.ts";
+import type { CreateSignaturePayload } from "@/services/crud/signature/types.ts";
+import { transactional, type DocumentLike } from "@/types/mongo.types.ts";
 
-const SIGNATURE_MODEL_NAME: string = "Signature";
-const SIGNATURE_COLLECTION_NAME: string = "signatures";
+import { Variables } from "@lib/variables/variables.ts";
+
+const signatureVariables = Variables.of({
+  "model-name": "Signature",
+  "collection-name": "signatures",
+} as const);
 
 export class SignatureRepository {
   constructor(private readonly mongoService: MongoService) {}
 
   private getModel(db: Mongoose): Model<Signature> {
     const existingModel: Nullable<Model<Signature>> = db.models[
-      SIGNATURE_MODEL_NAME
+      signatureVariables.get("model-name")
     ] as Nullable<Model<Signature>>;
 
     if (existingModel) {
@@ -25,9 +29,9 @@ export class SignatureRepository {
     }
 
     return db.model<Signature>(
-      SIGNATURE_MODEL_NAME,
+      signatureVariables.get("model-name"),
       SignatureMongoSchema,
-      SIGNATURE_COLLECTION_NAME,
+      signatureVariables.get("collection-name"),
     );
   }
 

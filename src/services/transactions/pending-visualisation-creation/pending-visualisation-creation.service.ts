@@ -3,8 +3,8 @@ import type {
   GardenDrawDataDto,
   VisualisationPendingDto,
 } from "@kk-garden/shared/types";
-import type { VisualisationPendingService } from "@/services/crud/visualisation-pending/visualisation-pending.service.js";
-import type { MongoService } from "@/services/mongo/mongo.service.js";
+import type { VisualisationPendingService } from "@/services/crud/visualisation-pending/visualisation-pending.service.ts";
+import type { MongoService } from "@/services/mongo/mongo.service.ts";
 import type { ClientSession, Mongoose } from "mongoose";
 
 export class PendingVisualisationCreationService {

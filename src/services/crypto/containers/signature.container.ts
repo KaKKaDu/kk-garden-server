@@ -1,9 +1,9 @@
-import type { PayloadNormaliser } from "@/services/crypto/types.js";
+import type { PayloadNormaliser } from "@/services/crypto/types.ts";
 import type { Signature } from "@kk-garden/shared/types";
 import { handleError, type SuccessDataAny } from "@kk-garden/shared/errors";
 import { SignatureSchema } from "@kk-garden/shared/schemas";
-import { CryptoService } from "@/services/crypto/crypto.service.js";
-import { cryptoRepositorySingleton } from "@/services/crypto/containers/crypto.container.js";
+import { CryptoService } from "@/services/crypto/crypto.service.ts";
+import { cryptoRepositorySingleton } from "@/services/crypto/containers/crypto.container.ts";
 
 const signaturePayloadNormaliser: PayloadNormaliser<Signature> = (
   payload: Signature,

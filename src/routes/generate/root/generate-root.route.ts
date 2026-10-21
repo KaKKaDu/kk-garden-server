@@ -1,4 +1,4 @@
-import type { RouteFactory } from "@/types/route.types.js";
+import type { RouteFactory } from "@/types/route.types.ts";
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import {
@@ -7,17 +7,17 @@ import {
   type GenerateRootResponse,
   GenerateRootResponseSchema,
 } from "@kk-garden/shared/schemas";
-import { HandleRouteError } from "@lib/route-error/route-error.js";
+import { HandleRouteError } from "@lib/route-error/route-error.ts";
 import type {
   ErrorResponse,
   GardenDrawData,
   GardenDrawDataDto,
   VisualisationPendingDto,
 } from "@kk-garden/shared/types";
-import { GardenGenerator } from "@lib/generations/generate/generate-garden.js";
+import { GardenGenerator } from "@lib/generations/generate/generate-garden.ts";
 import { gardenDrawDataTransformer } from "@kk-garden/shared/transformers";
 import { randomUUID } from "node:crypto";
-import { getPendingVisualisationCreationService } from "@/services/transactions/pending-visualisation-creation/index.js";
+import { getPendingVisualisationCreationService } from "@/services/transactions/pending-visualisation-creation/index.ts";
 import type { SuccessDataAny } from "@kk-garden/shared/errors";
 
 export const generateRootRoute: RouteFactory = (

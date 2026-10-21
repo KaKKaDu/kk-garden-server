@@ -8,9 +8,9 @@ import { AppError, type SuccessDataAny } from "@kk-garden/shared/errors";
 import type { ErrorResponse } from "@kk-garden/shared/types";
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
-import { getProfileService } from "@/services/crud/profile/index.js";
-import type { RouteFactory } from "@/types/route.types.js";
-import { HandleRouteError } from "@lib/route-error/route-error.js";
+import { getProfileService } from "@/services/crud/profile/index.ts";
+import type { RouteFactory } from "@/types/route.types.ts";
+import { HandleRouteError } from "@lib/route-error/route-error.ts";
 
 export const profileRootPatchRoute: RouteFactory = (
   fastify: FastifyInstance,

@@ -1,6 +1,6 @@
 import type { SuccessDataAny } from "@kk-garden/shared/errors";
-import type { PayloadNormaliser } from "@/services/crypto/types.js";
-import type { CryptoRepository } from "@/services/crypto/crypto.repository.js";
+import type { PayloadNormaliser } from "@/services/crypto/types.ts";
+import type { CryptoRepository } from "@/services/crypto/crypto.repository.ts";
 
 export class CryptoService<Payload> {
   constructor(

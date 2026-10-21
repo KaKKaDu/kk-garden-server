@@ -2,15 +2,19 @@ import type { SuccessDataAny } from "@kk-garden/shared/errors";
 import type { Nullable, User } from "@kk-garden/shared/types";
 import type { ClientSession, Mongoose } from "mongoose";
 import { ObjectId, type Collection } from "mongodb";
-import { parseUser } from "@/schemas/models/index.js";
+import { parseUser } from "@/schemas/models/index.ts";
 import {
   deriveUserStatus,
   type UserStatusSignals,
-} from "@/lib/auth/derive-user-status.js";
-import type { MongoService } from "@/services/mongo/mongo.service.js";
-import { transactional } from "@/types/mongo.types.js";
+} from "@/lib/auth/derive-user-status.ts";
+import type { MongoService } from "@/services/mongo/mongo.service.ts";
+import { transactional } from "@/types/mongo.types.ts";
 
-const USER_COLLECTION_NAME: string = "user";
+import { Variables } from "@lib/variables/variables.ts";
+
+const userVariables = Variables.of({
+  "collection-name": "user",
+} as const);
 
 type BetterAuthUserDocument = {
   _id: ObjectId | string;
@@ -29,7 +33,7 @@ export class UserRepository {
     return db.connection
       .getClient()
       .db()
-      .collection<BetterAuthUserDocument>(USER_COLLECTION_NAME);
+      .collection<BetterAuthUserDocument>(userVariables.get("collection-name"));
   }
 
   private toDto(document: BetterAuthUserDocument): User {

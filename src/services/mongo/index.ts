@@ -1,5 +1,5 @@
-import { MongoService } from "@/services/mongo/mongo.service.js";
-import { MongoRepository } from "@/services/mongo/mongo.repository.js";
+import { MongoService } from "@/services/mongo/mongo.service.ts";
+import { MongoRepository } from "@/services/mongo/mongo.repository.ts";
 
 const globalWithMongo = globalThis as unknown as {
   mongoService: MongoService | undefined;

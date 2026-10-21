@@ -1,8 +1,8 @@
-import type { PayloadNormaliser } from "@/services/crypto/types.js";
+import type { PayloadNormaliser } from "@/services/crypto/types.ts";
 import type {
   EnvService,
   EnvVariableFormatter,
-} from "@/services/env/env.service.js";
+} from "@/services/env/env.service.ts";
 import type { Nullable } from "@kk-garden/shared/types";
 import { handleError, type SuccessDataAny } from "@kk-garden/shared/errors";
 import {

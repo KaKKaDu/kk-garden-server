@@ -1,11 +1,11 @@
 import { Mongoose } from "mongoose";
-import type { MongoRepository } from "@/services/mongo/mongo.repository.js";
+import type { MongoRepository } from "@/services/mongo/mongo.repository.ts";
 import {
   type DataObject,
   handleError,
   type SuccessDataAny,
 } from "@kk-garden/shared/errors";
-import { Logger } from "@lib/logs/logger.js";
+import { Logger } from "@lib/logs/logger.ts";
 
 export class MongoService {
   constructor(private readonly repository: MongoRepository) {}

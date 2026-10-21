@@ -1,7 +1,7 @@
 import type { Mongoose } from "mongoose";
 import type { Db, MongoClient } from "mongodb";
 import type { SuccessDataAny } from "@kk-garden/shared/errors";
-import { getMongoService } from "@/services/mongo/index.js";
+import { getMongoService } from "@/services/mongo/index.ts";
 
 export interface AuthDbBridge {
   db: Db;

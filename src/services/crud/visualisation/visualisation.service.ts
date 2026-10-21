@@ -6,11 +6,11 @@ import type {
   VisualisationDto,
 } from "@kk-garden/shared/types";
 import type { ClientSession } from "mongoose";
-import type { VisualisationRepository } from "@/services/crud/visualisation/visualisation.repository.js";
-import type { CreateVisualisationPayload } from "@/services/crud/visualisation/types.js";
+import type { VisualisationRepository } from "@/services/crud/visualisation/visualisation.repository.ts";
+import type { CreateVisualisationPayload } from "@/services/crud/visualisation/types.ts";
 import { gardenDrawDataTransformer } from "@kk-garden/shared/transformers";
-import { generateGardenDrawDataReport } from "@lib/generations/reports/garden-draw-data-report.js";
-import { transactional } from "@/types/mongo.types.js";
+import { generateGardenDrawDataReport } from "@lib/generations/reports/garden-draw-data-report.ts";
+import { transactional } from "@/types/mongo.types.ts";
 import crypto from "node:crypto";
 
 export class VisualisationService {
