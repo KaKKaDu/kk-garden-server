@@ -14,6 +14,7 @@ import type { ProfileRepository } from "@/services/crud/profile/profile.reposito
 import type {
   ProfileAvatarReferenceChange,
   ProfileLookup,
+  ProfileUpdateRateLimit,
   ProfileUpdateFields,
 } from "@/services/crud/profile/types.js";
 import type { UserService } from "@/services/crud/user/user.service.js";
@@ -103,6 +104,89 @@ export class ProfileService {
       const result: SuccessDataAny<ProfileOwnerResponse> =
         handleError<ProfileOwnerResponse>(error);
       Logger.report("ProfileService.getProfile", result);
+      return result;
+    }
+  }
+
+  async updateProfile(
+    userId: string,
+    fields: ProfileUpdateFields,
+  ): Promise<SuccessDataAny<ProfileOwnerResponse>> {
+    try {
+      const userResult: SuccessDataAny<User> =
+        await this.userService.getById.direct(userId);
+      if (!userResult.success) {
+        const failedResult: SuccessDataAny<ProfileOwnerResponse> = {
+          success: false,
+          errors: userResult.errors,
+        };
+        Logger.report("ProfileService.updateProfile", failedResult);
+        return failedResult;
+      }
+      if (!userResult.data) {
+        throw new AppError({
+          status: 500,
+          message: "Profile owner lookup returned no data",
+        });
+      }
+      if (userResult.data.status !== "active") {
+        throw new AppError({
+          status: 403,
+          message: "Only active accounts can update profiles",
+        });
+      }
+
+      const rateLimitResult: SuccessDataAny<ProfileUpdateRateLimit> =
+        await this.repository.consumeUpdateRateLimit(userId);
+      if (!rateLimitResult.success) {
+        const failedResult: SuccessDataAny<ProfileOwnerResponse> = {
+          success: false,
+          errors: rateLimitResult.errors,
+        };
+        Logger.report("ProfileService.updateProfile", failedResult);
+        return failedResult;
+      }
+      if (!rateLimitResult.data) {
+        throw new AppError({
+          status: 500,
+          message: "Profile update rate limit returned no data",
+        });
+      }
+      if (!rateLimitResult.data.allowed) {
+        throw new AppError({
+          status: 429,
+          message: `Profile update limit reached; retry in ${rateLimitResult.data.retryAfterSeconds} seconds`,
+        });
+      }
+
+      const updateResult: SuccessDataAny<ProfileLookup> =
+        await this.updateFields.direct(userId, fields);
+      if (!updateResult.success) {
+        const failedResult: SuccessDataAny<ProfileOwnerResponse> = {
+          success: false,
+          errors: updateResult.errors,
+        };
+        Logger.report("ProfileService.updateProfile", failedResult);
+        return failedResult;
+      }
+      if (!updateResult.data) {
+        throw new AppError({
+          status: 500,
+          message: "Profile update returned no data",
+        });
+      }
+      if (!updateResult.data.profile) {
+        throw new AppError({
+          status: 400,
+          message: "A display name is required to create a profile",
+        });
+      }
+
+      return this.getProfile(userId);
+    } catch (error: unknown) {
+      const result: SuccessDataAny<ProfileOwnerResponse> =
+        handleError<ProfileOwnerResponse>(error);
+      Logger.report("ProfileService.updateProfile", result);
       return result;
     }
   }

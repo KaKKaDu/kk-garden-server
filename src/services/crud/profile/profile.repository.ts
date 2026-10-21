@@ -1,5 +1,6 @@
 import { MongoServerError } from "mongodb";
 import type { SuccessDataAny } from "@kk-garden/shared/errors";
+import type { Collection } from "mongodb";
 import {
   ProfileAccentHexSchema,
   ProfileAvatarObjectKeySchema,
@@ -13,12 +14,24 @@ import type { MongoService } from "@/services/mongo/mongo.service.js";
 import type {
   ProfileAvatarReferenceChange,
   ProfileLookup,
+  ProfileUpdateRateLimit,
   ProfileUpdateFields,
 } from "@/services/crud/profile/types.js";
 import { transactional, type DocumentLike } from "@/types/mongo.types.js";
 
 const PROFILE_MODEL_NAME: string = "Profile";
 const PROFILE_COLLECTION_NAME: string = "profiles";
+const PROFILE_UPDATE_RATE_LIMIT_COLLECTION_NAME: string =
+  "profileUpdateRateLimits";
+const PROFILE_UPDATE_RATE_LIMIT: number = 20;
+const PROFILE_UPDATE_RATE_WINDOW_MS: number = 60_000;
+const PROFILE_UPDATE_RATE_RETENTION_MS: number = 120_000;
+
+type ProfileUpdateRateLimitRecord = {
+  _id: string;
+  count: number;
+  expiresAt: Date;
+};
 
 export class ProfileRepository {
   constructor(private readonly mongoService: MongoService) {}
@@ -55,6 +68,77 @@ export class ProfileRepository {
       error instanceof MongoServerError &&
       error.code === 11000 &&
       Boolean(error.keyPattern?._id)
+    );
+  }
+
+  async consumeUpdateRateLimit(
+    userId: string,
+  ): Promise<SuccessDataAny<ProfileUpdateRateLimit>> {
+    return this.mongoService.execute<ProfileUpdateRateLimit>(
+      async (db: Mongoose): Promise<ProfileUpdateRateLimit> => {
+        const collection: Collection<ProfileUpdateRateLimitRecord> =
+          db.connection
+            .getClient()
+            .db()
+            .collection<ProfileUpdateRateLimitRecord>(
+              PROFILE_UPDATE_RATE_LIMIT_COLLECTION_NAME,
+            );
+        await collection.createIndex(
+          { expiresAt: 1 },
+          {
+            expireAfterSeconds: 0,
+            name: "profile_update_rate_limit_expiry",
+          },
+        );
+
+        const now: Date = new Date();
+        const nowMs: number = now.getTime();
+        const windowStartMs: number =
+          Math.floor(nowMs / PROFILE_UPDATE_RATE_WINDOW_MS) *
+          PROFILE_UPDATE_RATE_WINDOW_MS;
+        const windowEndMs: number =
+          windowStartMs + PROFILE_UPDATE_RATE_WINDOW_MS;
+        const bucketId: string = `${userId}:${windowStartMs}`;
+        const filter: { _id: string } = { _id: bucketId };
+        const update = {
+          $inc: { count: 1 },
+          $setOnInsert: {
+            expiresAt: new Date(windowEndMs + PROFILE_UPDATE_RATE_RETENTION_MS),
+          },
+        };
+
+        let record: ProfileUpdateRateLimitRecord | null;
+        try {
+          record = await collection.findOneAndUpdate(filter, update, {
+            upsert: true,
+            returnDocument: "after",
+          });
+        } catch (error: unknown) {
+          if (!(error instanceof MongoServerError) || error.code !== 11000) {
+            throw error;
+          }
+          record = await collection.findOneAndUpdate(filter, update, {
+            returnDocument: "after",
+          });
+          if (!record) {
+            throw error;
+          }
+        }
+
+        if (!record) {
+          throw new Error("Profile update rate limit counter was not returned");
+        }
+
+        const retryAfterSeconds: number = Math.max(
+          1,
+          Math.ceil((windowEndMs - nowMs) / 1_000),
+        );
+        return {
+          allowed: record.count <= PROFILE_UPDATE_RATE_LIMIT,
+          retryAfterSeconds,
+        };
+      },
+      "ProfileRepository.consumeUpdateRateLimit",
     );
   }
 
