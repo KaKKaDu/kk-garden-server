@@ -4,12 +4,13 @@ import {
   handleError,
   type SuccessDataAny,
 } from "@kk-garden/shared/errors";
+import type { Nullable } from "@kk-garden/shared/types";
 import { Logger } from "@lib/logs/logger.ts";
 import { Variables } from "@lib/variables/variables.ts";
 import type {
   AvatarImageContentType,
   NormalizedAvatarImage,
-} from "@/services/avatar-image/types.ts";
+} from "@/services/avatar/avatar-image/types.ts";
 
 const avatarImageVariables = Variables.of({
   "max-input-bytes": 5_000_000,
@@ -36,25 +37,26 @@ export class AvatarImageService {
   }
 
   private detectContentType(bytes: Buffer): AvatarImageContentType {
-    if (
-      bytes.length >= 3 &&
-      bytes[0] === 0xff &&
-      bytes[1] === 0xd8 &&
-      bytes[2] === 0xff
-    ) {
+    const hasJpegLength: boolean = bytes.length >= 3;
+    const hasJpegStart: boolean = bytes[0] === 0xff && bytes[1] === 0xd8;
+    const hasJpegEnd: boolean = bytes[2] === 0xff;
+    const isJpeg: boolean = hasJpegLength && hasJpegStart && hasJpegEnd;
+    if (isJpeg) {
       return "image/jpeg";
     }
-    if (
-      bytes.length >= 8 &&
-      bytes.subarray(0, 8).equals(Buffer.from("89504e470d0a1a0a", "hex"))
-    ) {
+    const hasPngLength: boolean = bytes.length >= 8;
+    const hasPngSignature: boolean = bytes
+      .subarray(0, 8)
+      .equals(Buffer.from("89504e470d0a1a0a", "hex"));
+    const isPng: boolean = hasPngLength && hasPngSignature;
+    if (isPng) {
       return "image/png";
     }
-    if (
-      bytes.length >= 12 &&
-      bytes.toString("ascii", 0, 4) === "RIFF" &&
-      bytes.toString("ascii", 8, 12) === "WEBP"
-    ) {
+    const hasWebpLength: boolean = bytes.length >= 12;
+    const hasRiffMarker: boolean = bytes.toString("ascii", 0, 4) === "RIFF";
+    const hasWebpMarker: boolean = bytes.toString("ascii", 8, 12) === "WEBP";
+    const isWebp: boolean = hasWebpLength && hasRiffMarker && hasWebpMarker;
+    if (isWebp) {
       return "image/webp";
     }
     throw this.invalidImage(
@@ -74,7 +76,9 @@ export class AvatarImageService {
         throw this.invalidImage("Animated PNG images are not accepted");
       }
       offset += 12 + size;
-      if (type === "IEND" && size === 0 && offset === bytes.length) {
+      const isEndChunk: boolean = type === "IEND";
+      const isEmptyEndChunk: boolean = size === 0;
+      if (isEndChunk && isEmptyEndChunk) {
         return;
       }
     }
@@ -93,11 +97,12 @@ export class AvatarImageService {
       if (end > bytes.length) {
         throw this.invalidImage("Malformed WebP image");
       }
-      if (
-        type === "ANIM" ||
-        type === "ANMF" ||
-        (type === "VP8X" && size > 0 && (bytes[offset + 8] & 0x02) !== 0)
-      ) {
+      const isAnimationChunk: boolean = type === "ANIM" || type === "ANMF";
+      const isExtendedWebpHeader: boolean = type === "VP8X" && size > 0;
+      const hasAnimationFlag: boolean =
+        isExtendedWebpHeader && (bytes[offset + 8] & 0x02) !== 0;
+      const isAnimated: boolean = isAnimationChunk || hasAnimationFlag;
+      if (isAnimated) {
         throw this.invalidImage("Animated WebP images are not accepted");
       }
       offset = end;
@@ -112,7 +117,7 @@ export class AvatarImageService {
     declaredContentType: AvatarImageContentType,
   ): Promise<SuccessDataAny<NormalizedAvatarImage>> {
     let acquired: boolean = false;
-    let pipeline: Sharp | undefined;
+    let pipeline: Nullable<Sharp> = null;
     let result: SuccessDataAny<NormalizedAvatarImage>;
     try {
       if (input.length < 1) {
@@ -161,21 +166,23 @@ export class AvatarImageService {
           "Avatar image format is unsupported or spoofed",
         );
       }
-      if (
-        !metadata.width ||
-        !metadata.height ||
-        metadata.width > avatarImageVariables.get("max-input-side") ||
-        metadata.height > avatarImageVariables.get("max-input-side") ||
-        metadata.width * metadata.height >
-          avatarImageVariables.get("max-input-pixels")
-      ) {
+      const width: number = metadata.width ?? 0;
+      const height: number = metadata.height ?? 0;
+      const missingDimensions: boolean = width === 0 || height === 0;
+      const sideLimitExceeded: boolean =
+        width > avatarImageVariables.get("max-input-side") ||
+        height > avatarImageVariables.get("max-input-side");
+      const pixelLimitExceeded: boolean =
+        width * height > avatarImageVariables.get("max-input-pixels");
+      const dimensionsInvalid: boolean = missingDimensions || sideLimitExceeded;
+      if (dimensionsInvalid || pixelLimitExceeded) {
         throw this.invalidImage("Avatar image exceeds source dimension limits");
       }
-      if (
-        (metadata.pages ?? 1) !== 1 ||
-        metadata.delay !== undefined ||
-        metadata.loop !== undefined
-      ) {
+      const hasMultiplePages: boolean = (metadata.pages ?? 1) !== 1;
+      const hasFrameDelay: boolean = metadata.delay !== undefined;
+      const hasLoopMetadata: boolean = metadata.loop !== undefined;
+      const animationMetadata: boolean = hasMultiplePages || hasFrameDelay;
+      if (animationMetadata || hasLoopMetadata) {
         throw this.invalidImage("Animated images are not accepted");
       }
       const output = await pipeline
@@ -193,11 +200,15 @@ export class AvatarImageService {
           effort: avatarImageVariables.get("webp-effort"),
         })
         .toBuffer({ resolveWithObject: true });
-      if (
-        output.info.width > avatarImageVariables.get("max-output-side") ||
-        output.info.height > avatarImageVariables.get("max-output-side") ||
-        output.data.length > avatarImageVariables.get("max-input-bytes")
-      ) {
+      const outputWidthExceeded: boolean =
+        output.info.width > avatarImageVariables.get("max-output-side");
+      const outputHeightExceeded: boolean =
+        output.info.height > avatarImageVariables.get("max-output-side");
+      const outputSizeExceeded: boolean =
+        output.data.length > avatarImageVariables.get("max-input-bytes");
+      const outputDimensionsExceeded: boolean =
+        outputWidthExceeded || outputHeightExceeded;
+      if (outputDimensionsExceeded || outputSizeExceeded) {
         throw new AppError({
           status: 500,
           message: "Avatar normalization exceeded output limits",

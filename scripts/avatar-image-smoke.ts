@@ -2,11 +2,11 @@ import assert from "node:assert/strict";
 import { crc32 } from "node:zlib";
 import sharp, { type Metadata, type Sharp } from "sharp";
 import type { DataObject, SuccessDataAny } from "@kk-garden/shared/errors";
-import { getAvatarImageService } from "../src/services/avatar-image/index.ts";
+import { getAvatarImageService } from "../src/services/avatar/avatar-image/index.ts";
 import type {
   AvatarImageContentType,
   NormalizedAvatarImage,
-} from "../src/services/avatar-image/types.ts";
+} from "../src/services/avatar/avatar-image/types.ts";
 
 /* eslint-disable no-console */
 
@@ -127,6 +127,8 @@ const run = async (): Promise<void> => {
   const png: Buffer = await image(120, 240, true).png().toBuffer();
   const webp: Buffer = await image(768, 1536).webp().toBuffer();
   await checkOutput(jpeg, "image/jpeg", 512, 256);
+  const pngWithTrailingNull: Buffer = Buffer.concat([png, Buffer.from([0])]);
+  await checkOutput(pngWithTrailingNull, "image/png", 120, 240);
   const alphaOutput: NormalizedAvatarImage = await checkOutput(
     png,
     "image/png",

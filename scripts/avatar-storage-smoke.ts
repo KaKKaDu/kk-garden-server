@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import dotenv from "dotenv";
 import type { DataObject, SuccessDataAny } from "@kk-garden/shared/errors";
-import { getAvatarStorageService } from "../src/services/avatar-storage/index.ts";
-import type { AvatarStorageService } from "../src/services/avatar-storage/avatar-storage.service.ts";
+import type { Nullable } from "@kk-garden/shared/types";
+import { getAvatarStorageService } from "../src/services/avatar/avatar-storage/index.ts";
+import type { AvatarStorageService } from "../src/services/avatar/avatar-storage/avatar-storage.service.ts";
 import { parseClientOrigins } from "../src/lib/auth/auth-origins.ts";
 
 /* eslint-disable no-console */
@@ -26,7 +28,7 @@ const request = async (url: string, init?: RequestInit): Promise<Response> => {
 };
 
 const run = async (): Promise<void> => {
-  const rawOrigins: string | undefined = process.env.CLIENT_ORIGINS;
+  const rawOrigins: Nullable<string> = process.env.CLIENT_ORIGINS;
   assert(rawOrigins, "CLIENT_ORIGINS must be configured");
   const origins: string[] = parseClientOrigins(
     rawOrigins,
@@ -101,7 +103,10 @@ const run = async (): Promise<void> => {
       downloaded.equals(fixture),
       "Bounded staging read must match uploaded bytes",
     );
-    const final = requireData(await storage.putFinal(downloaded));
+    const finalObjectKey: string = `avatars/final/${randomUUID()}.webp`;
+    const final = requireData(
+      await storage.putFinal(downloaded, finalObjectKey),
+    );
     keys.push(final.objectKey);
     const read = requireData(await storage.signRead(final.objectKey));
     const readUrl: URL = new URL(read.url);

@@ -1,12 +1,12 @@
 import type { SuccessDataAny } from "@kk-garden/shared/errors";
-import type { AvatarStorageRepository } from "@/services/avatar-storage/avatar-storage.repository.ts";
+import type { AvatarStorageRepository } from "@/services/avatar/avatar-storage/avatar-storage.repository.ts";
 import type {
   AvatarContentType,
   AvatarStorageMetadata,
   AvatarStorageObject,
   AvatarStorageSignedUrl,
   AvatarStorageUpload,
-} from "@/services/avatar-storage/types.ts";
+} from "@/services/avatar/avatar-storage/types.ts";
 
 export class AvatarStorageService {
   constructor(private readonly repository: AvatarStorageRepository) {}
@@ -29,12 +29,19 @@ export class AvatarStorageService {
     return this.repository.inspectStaging(objectKey);
   }
 
-  readStaging(objectKey: string): Promise<SuccessDataAny<Buffer>> {
-    return this.repository.readStaging(objectKey);
+  readStaging(
+    objectKey: string,
+    signal?: AbortSignal,
+  ): Promise<SuccessDataAny<Buffer>> {
+    return this.repository.readStaging(objectKey, signal);
   }
 
-  putFinal(bytes: Buffer): Promise<SuccessDataAny<AvatarStorageObject>> {
-    return this.repository.putFinal(bytes);
+  putFinal(
+    bytes: Buffer,
+    objectKey: string,
+    signal?: AbortSignal,
+  ): Promise<SuccessDataAny<AvatarStorageObject>> {
+    return this.repository.putFinal(bytes, objectKey, signal);
   }
 
   deleteObject(

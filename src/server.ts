@@ -10,12 +10,11 @@ import cors from "@fastify/cors";
 import { getEnvService } from "@/services/env/index.ts";
 import type { Nullable } from "@kk-garden/shared/types";
 import { parseClientOrigins } from "@/lib/auth/auth-origins.ts";
-import { getAvatarCleanupService } from "@/services/avatar-cleanup/index.ts";
+import { getAvatarCleanupService } from "@/services/avatar/avatar-cleanup/index.ts";
 
 const avatarCleanupService = getAvatarCleanupService();
 
 void init(async (app: FastifyInstance) => {
-  app.decorate("avatarCleanup", avatarCleanupService);
   const rawTrustedOrigins: Nullable<string> =
     getEnvService().getRawEnvValue("CLIENT_ORIGINS");
   if (!rawTrustedOrigins) {
@@ -31,7 +30,7 @@ void init(async (app: FastifyInstance) => {
     .register(cors, {
       origin: trustedOrigins,
       credentials: true,
-      methods: ["GET", "HEAD", "POST", "PATCH"],
+      methods: ["GET", "HEAD", "POST", "PATCH", "DELETE"],
     })
     .register(authRoutes, { prefix: "/api/auth" })
     .register(profileRoutes, { prefix: "/profile" })

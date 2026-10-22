@@ -1,5 +1,6 @@
 import type {
   AvatarCleanupTarget,
+  Nullable,
   ProfileAvatarUploadSession,
   UserId,
 } from "@kk-garden/shared/types";
@@ -11,5 +12,5 @@ export type AvatarCleanupData = {
 
 export type AvatarCleanupContext = {
   referenced: boolean;
-  upload: ProfileAvatarUploadSession | null;
+  upload: Nullable<ProfileAvatarUploadSession>;
 };

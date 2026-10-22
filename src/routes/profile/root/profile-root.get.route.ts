@@ -27,6 +27,7 @@ export const profileRootGetRoute: RouteFactory = (
       },
     },
     async (request, reply): Promise<void> => {
+      reply.header("Cache-Control", "private, no-store");
       try {
         const userId: string | undefined = request.user?.id;
         if (!userId) {
@@ -48,10 +49,7 @@ export const profileRootGetRoute: RouteFactory = (
           return;
         }
 
-        reply
-          .header("Cache-Control", "private, no-store")
-          .status(200)
-          .send(result.data);
+        reply.status(200).send(result.data);
       } catch (error: unknown) {
         const response: ErrorResponse = HandleRouteError.raw(error);
         reply.status(response.statusCode).send(response);

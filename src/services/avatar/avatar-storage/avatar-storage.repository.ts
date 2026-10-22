@@ -26,7 +26,7 @@ import type {
   AvatarStorageObject,
   AvatarStorageSignedUrl,
   AvatarStorageUpload,
-} from "@/services/avatar-storage/types.ts";
+} from "@/services/avatar/avatar-storage/types.ts";
 
 import { Variables } from "@lib/variables/variables.ts";
 
@@ -97,15 +97,24 @@ export class AvatarStorageRepository {
       ? `avatars/${kind}/`
       : "avatars/(staging|final)/";
     const suffix: string = kind === "staging" ? "" : "(\\.webp)?";
-    if (
-      !new RegExp(
-        `^${prefix}${avatarStorageVariables.get("object-id-pattern")}${suffix}$`,
-      ).test(objectKey) ||
-      (objectKey.startsWith(avatarStorageVariables.get("final-prefix")) &&
-        !objectKey.endsWith(".webp")) ||
-      (objectKey.startsWith(avatarStorageVariables.get("staging-prefix")) &&
-        objectKey.endsWith(".webp"))
-    ) {
+    const matchesKeyPattern: boolean = new RegExp(
+      `^${prefix}${avatarStorageVariables.get("object-id-pattern")}${suffix}$`,
+    ).test(objectKey);
+    const isFinalKey: boolean = objectKey.startsWith(
+      avatarStorageVariables.get("final-prefix"),
+    );
+    const finalKeyHasInvalidExtension: boolean =
+      isFinalKey && !objectKey.endsWith(".webp");
+    const isStagingKey: boolean = objectKey.startsWith(
+      avatarStorageVariables.get("staging-prefix"),
+    );
+    const stagingKeyHasInvalidExtension: boolean =
+      isStagingKey && objectKey.endsWith(".webp");
+    const prefixOrFinalExtensionInvalid: boolean =
+      !matchesKeyPattern || finalKeyHasInvalidExtension;
+    const keyInvalid: boolean =
+      prefixOrFinalExtensionInvalid || stagingKeyHasInvalidExtension;
+    if (keyInvalid) {
       throw new AppError({
         status: 400,
         message: "Invalid server-managed avatar object reference",
@@ -128,12 +137,17 @@ export class AvatarStorageRepository {
         const notFound: boolean =
           error instanceof S3ServiceException &&
           error.$metadata.httpStatusCode === 404;
+        const preconditionFailed: boolean =
+          error instanceof S3ServiceException &&
+          error.$metadata.httpStatusCode === 412;
         result = handleError<T>(
           new AppError({
-            status: notFound ? 404 : 502,
+            status: notFound ? 404 : preconditionFailed ? 409 : 502,
             message: notFound
               ? "Avatar storage object was not found"
-              : "Avatar storage operation failed",
+              : preconditionFailed
+                ? "Avatar storage object changed during processing"
+                : "Avatar storage operation failed",
           }),
         );
       }
@@ -249,7 +263,10 @@ export class AvatarStorageRepository {
     );
   }
 
-  async readStaging(objectKey: string): Promise<SuccessDataAny<Buffer>> {
+  async readStaging(
+    objectKey: string,
+    signal?: AbortSignal,
+  ): Promise<SuccessDataAny<Buffer>> {
     return this.execute(
       "readStaging",
       async (
@@ -258,6 +275,14 @@ export class AvatarStorageRepository {
       ): Promise<Buffer> => {
         this.validateObjectKey(objectKey, "staging");
         const controller: AbortController = new AbortController();
+        const abortRequest = (): void => {
+          controller.abort(signal?.reason);
+        };
+        if (signal?.aborted) {
+          abortRequest();
+        } else {
+          signal?.addEventListener("abort", abortRequest, { once: true });
+        }
         const timeout = setTimeout(
           (): void => controller.abort(),
           avatarStorageVariables.get("request-timeout-ms"),
@@ -276,10 +301,10 @@ export class AvatarStorageRepository {
               message: "Avatar storage metadata is incomplete",
             });
           }
-          if (
-            head.ContentLength < 1 ||
-            head.ContentLength > avatarStorageVariables.get("max-avatar-bytes")
-          ) {
+          const stagingIsEmpty: boolean = head.ContentLength < 1;
+          const stagingIsOversized: boolean =
+            head.ContentLength > avatarStorageVariables.get("max-avatar-bytes");
+          if (stagingIsEmpty || stagingIsOversized) {
             throw new AppError({
               status: 413,
               message:
@@ -333,28 +358,33 @@ export class AvatarStorageRepository {
         } finally {
           clearTimeout(timeout);
           controller.abort();
+          signal?.removeEventListener("abort", abortRequest);
         }
       },
     );
   }
 
-  async putFinal(bytes: Buffer): Promise<SuccessDataAny<AvatarStorageObject>> {
+  async putFinal(
+    bytes: Buffer,
+    objectKey: string,
+    signal?: AbortSignal,
+  ): Promise<SuccessDataAny<AvatarStorageObject>> {
     return this.execute(
       "putFinal",
       async (
         client: S3Client,
         config: AvatarStorageConfig,
       ): Promise<AvatarStorageObject> => {
-        if (
-          bytes.length < 1 ||
-          bytes.length > avatarStorageVariables.get("max-avatar-bytes")
-        ) {
+        const finalImageIsEmpty: boolean = bytes.length < 1;
+        const finalImageIsOversized: boolean =
+          bytes.length > avatarStorageVariables.get("max-avatar-bytes");
+        if (finalImageIsEmpty || finalImageIsOversized) {
           throw new AppError({
             status: 413,
             message: "Final avatar size must be between 1 and 5,000,000 bytes",
           });
         }
-        const objectKey: string = `${avatarStorageVariables.get("final-prefix")}${randomUUID()}.webp`;
+        this.validateObjectKey(objectKey, "final");
         await client.send(
           new PutObjectCommand({
             Bucket: config.R2_BUCKET_NAME,
@@ -364,6 +394,7 @@ export class AvatarStorageRepository {
             CacheControl: avatarStorageVariables.get("object-cache-control"),
             IfNoneMatch: "*",
           }),
+          signal ? { abortSignal: signal } : undefined,
         );
         return { objectKey };
       },
@@ -388,12 +419,10 @@ export class AvatarStorageRepository {
             }),
           );
         } catch (error: unknown) {
-          if (
-            !(
-              error instanceof S3ServiceException &&
-              error.$metadata.httpStatusCode === 404
-            )
-          ) {
+          const objectNotFound: boolean =
+            error instanceof S3ServiceException &&
+            error.$metadata.httpStatusCode === 404;
+          if (!objectNotFound) {
             throw error;
           }
         }

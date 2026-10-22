@@ -4,19 +4,17 @@ import {
   ProfileAvatarUploadResponseSchema,
 } from "@kk-garden/shared/schemas";
 import { AppError } from "@kk-garden/shared/errors";
+import type { Nullable } from "@kk-garden/shared/types";
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
-import type { AvatarCleanupService } from "@/services/avatar-cleanup/avatar-cleanup.service.ts";
-import { getAvatarUploadService } from "@/services/avatar-upload/index.ts";
+import { getAvatarUploadService } from "@/services/avatar/avatar-upload/index.ts";
 import type { RouteFactory } from "@/types/route.types.ts";
 import { HandleRouteError } from "@lib/route-error/route-error.ts";
 
 export const profileAvatarUploadRoute: RouteFactory = (
   fastify: FastifyInstance,
 ): void => {
-  const uploads = getAvatarUploadService(
-    fastify.getDecorator<AvatarCleanupService>("avatarCleanup"),
-  );
+  const uploads = getAvatarUploadService();
   fastify.addHook("onReady", async (): Promise<void> => {
     const result = await uploads.initialize();
     if (!result.success) {
@@ -39,7 +37,7 @@ export const profileAvatarUploadRoute: RouteFactory = (
     async (request, reply): Promise<void> => {
       reply.header("Cache-Control", "private, no-store");
       try {
-        const ownerId: string | undefined = request.user?.id;
+        const ownerId: Nullable<string> = request.user?.id;
         if (!ownerId) {
           throw new AppError({
             status: 401,

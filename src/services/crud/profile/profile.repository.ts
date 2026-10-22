@@ -55,11 +55,12 @@ export class ProfileRepository {
   }
 
   private isProfileIdCollision(error: unknown): boolean {
-    return (
-      error instanceof MongoServerError &&
-      error.code === 11000 &&
-      Boolean(error.keyPattern?._id)
-    );
+    const isDuplicateKey: boolean =
+      error instanceof MongoServerError && error.code === 11000;
+    const hasProfileIdKey: boolean =
+      error instanceof MongoServerError && Boolean(error.keyPattern?._id);
+    const isProfileIdCollision: boolean = isDuplicateKey && hasProfileIdKey;
+    return isProfileIdCollision;
   }
 
   getById = transactional(
@@ -120,10 +121,11 @@ export class ProfileRepository {
             }
           }
 
-          if (
-            Object.keys(setFields).length === 0 &&
-            Object.keys(unsetFields).length === 0
-          ) {
+          const hasNoSetFields: boolean = Object.keys(setFields).length === 0;
+          const hasNoUnsetFields: boolean =
+            Object.keys(unsetFields).length === 0;
+          const hasNoChanges: boolean = hasNoSetFields && hasNoUnsetFields;
+          if (hasNoChanges) {
             throw new Error("At least one profile field must be updated");
           }
 
@@ -150,11 +152,13 @@ export class ProfileRepository {
               .findOneAndUpdate({ _id: userId }, update, options)
               .exec();
           } catch (error: unknown) {
-            if (
-              !session &&
-              canCreateProfile &&
-              this.isProfileIdCollision(error)
-            ) {
+            const hasNoTransaction: boolean = !session;
+            const createsProfile: boolean = canCreateProfile;
+            const profileIdCollision: boolean =
+              this.isProfileIdCollision(error);
+            const canRetryCollision: boolean =
+              hasNoTransaction && createsProfile && profileIdCollision;
+            if (canRetryCollision) {
               document = await model
                 .findOneAndUpdate({ _id: userId }, update, {
                   ...options,
@@ -215,17 +219,61 @@ export class ProfileRepository {
     },
   );
 
-  clearAvatarObjectKey = transactional(
+  setAvatarObjectKeyIfCurrent = transactional(
     async (
       userId: string,
+      objectKey: string,
+      expectedObjectKey: Nullable<string>,
       session: Nullable<ClientSession>,
     ): Promise<SuccessDataAny<ProfileAvatarReferenceChange>> => {
       return this.mongoService.execute<ProfileAvatarReferenceChange>(
         async (db: Mongoose): Promise<ProfileAvatarReferenceChange> => {
+          const validatedObjectKey: string =
+            ProfileAvatarObjectKeySchema.parse(objectKey);
+          const model: Model<Profile> = this.getModel(db);
+          const avatarMissing: boolean = !expectedObjectKey;
+          const document: Nullable<DocumentLike> = avatarMissing
+            ? await model
+                .findOneAndUpdate(
+                  { _id: userId, avatarObjectKey: { $exists: false } },
+                  { $set: { avatarObjectKey: validatedObjectKey } },
+                  { new: false, session: session ?? undefined },
+                )
+                .exec()
+            : await model
+                .findOneAndUpdate(
+                  { _id: userId, avatarObjectKey: expectedObjectKey },
+                  { $set: { avatarObjectKey: validatedObjectKey } },
+                  { new: false, session: session ?? undefined },
+                )
+                .exec();
+          const previousProfile: Nullable<Profile> = document
+            ? this.toDto(document)
+            : null;
+          return {
+            previousProfile,
+            displacedAvatarObjectKey: previousProfile?.avatarObjectKey ?? null,
+          };
+        },
+        "ProfileRepository.setAvatarObjectKeyIfCurrent",
+      );
+    },
+  );
+
+  clearAvatarObjectKeyIfCurrent = transactional(
+    async (
+      userId: string,
+      expectedObjectKey: string,
+      session: Nullable<ClientSession>,
+    ): Promise<SuccessDataAny<ProfileAvatarReferenceChange>> => {
+      return this.mongoService.execute<ProfileAvatarReferenceChange>(
+        async (db: Mongoose): Promise<ProfileAvatarReferenceChange> => {
+          const validatedObjectKey: string =
+            ProfileAvatarObjectKeySchema.parse(expectedObjectKey);
           const model: Model<Profile> = this.getModel(db);
           const document: Nullable<DocumentLike> = await model
             .findOneAndUpdate(
-              { _id: userId },
+              { _id: userId, avatarObjectKey: validatedObjectKey },
               { $unset: { avatarObjectKey: 1 } },
               { new: false, session: session ?? undefined },
             )
@@ -239,7 +287,7 @@ export class ProfileRepository {
             displacedAvatarObjectKey: previousProfile?.avatarObjectKey ?? null,
           };
         },
-        "ProfileRepository.clearAvatarObjectKey",
+        "ProfileRepository.clearAvatarObjectKeyIfCurrent",
       );
     },
   );

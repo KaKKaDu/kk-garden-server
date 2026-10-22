@@ -7,6 +7,7 @@ import {
   UserIdSchema,
 } from "@kk-garden/shared/schemas";
 import type {
+  Nullable,
   Profile,
   ProfileAvatarUploadSession,
 } from "@kk-garden/shared/types";
@@ -15,7 +16,7 @@ import type { MongoService } from "@/services/mongo/mongo.service.ts";
 import type {
   AvatarCleanupContext,
   AvatarCleanupData,
-} from "@/services/avatar-cleanup/types.ts";
+} from "@/services/avatar/avatar-cleanup/types.ts";
 import { Logger } from "@lib/logs/logger.ts";
 import { Variables } from "@lib/variables/variables.ts";
 
@@ -131,18 +132,23 @@ export class AvatarCleanupRepository {
         const uploads = db.collection<ProfileAvatarUploadSession>(
           "profile_avatar_upload_sessions",
         );
-        const upload = await uploads.findOne(
-          data.target.kind === "displaced-avatar"
-            ? { state: "processing", candidateObjectKey: data.target.objectKey }
-            : { _id: data.target.uploadId, ownerId: data.ownerId },
-        );
+        const upload: Nullable<ProfileAvatarUploadSession> =
+          await uploads.findOne(
+            data.target.kind === "displaced-avatar"
+              ? {
+                  state: "processing",
+                  candidateObjectKey: data.target.objectKey,
+                }
+              : { _id: data.target.uploadId, ownerId: data.ownerId },
+          );
         // Read upload state before the profile so a concurrent promotion cannot escape both checks.
-        const referenced: boolean =
-          data.target.kind !== "staging" &&
-          (await profiles.findOne(
-            { avatarObjectKey: data.target.objectKey },
-            { projection: { _id: 1 } },
-          )) !== null;
+        const isProfileAvatarTarget: boolean = data.target.kind !== "staging";
+        const referenced: boolean = isProfileAvatarTarget
+          ? (await profiles.findOne(
+              { avatarObjectKey: data.target.objectKey },
+              { projection: { _id: 1 } },
+            )) !== null
+          : false;
         return {
           referenced,
           upload: upload

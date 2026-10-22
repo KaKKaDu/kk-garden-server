@@ -11,19 +11,19 @@ import {
   ProfileAvatarUploadSessionSchema,
 } from "@kk-garden/shared/schemas";
 import type {
+  Nullable,
   ProfileAvatarUploadSession,
   User,
   UserStatus,
 } from "@kk-garden/shared/types";
-import { AvatarUploadRepository } from "../src/services/avatar-upload/avatar-upload.repository.ts";
-import { AvatarStorageService } from "../src/services/avatar-storage/avatar-storage.service.ts";
-import { AvatarCleanupService } from "../src/services/avatar-cleanup/avatar-cleanup.service.ts";
-import type { AvatarCleanupData } from "../src/services/avatar-cleanup/types.ts";
+import { AvatarUploadRepository } from "../src/services/avatar/avatar-upload/avatar-upload.repository.ts";
+import { AvatarStorageService } from "../src/services/avatar/avatar-storage/avatar-storage.service.ts";
+import { AvatarCleanupService } from "../src/services/avatar/avatar-cleanup/avatar-cleanup.service.ts";
+import type { AvatarCleanupData } from "../src/services/avatar/avatar-cleanup/types.ts";
 import type {
   AvatarContentType,
   AvatarStorageUpload,
-} from "../src/services/avatar-storage/types.ts";
-import { getAvatarCleanupService } from "../src/services/avatar-cleanup/index.ts";
+} from "../src/services/avatar/avatar-storage/types.ts";
 import { getUserService } from "../src/services/crud/user/index.ts";
 import { profileAvatarUploadRoute } from "../src/routes/profile/avatar/upload/profile-avatar-upload.route.ts";
 
@@ -31,7 +31,7 @@ import { profileAvatarUploadRoute } from "../src/routes/profile/avatar/upload/pr
 
 let authenticated: boolean = true;
 let status: UserStatus = "active";
-let failure: "save" | "queue" | "sign" | null = null;
+let failure: Nullable<"save" | "queue" | "sign"> = null;
 const saved: ProfileAvatarUploadSession[] = [];
 const order: string[] = [];
 const failed = <T extends object>(): SuccessDataAny<T> => ({
@@ -119,7 +119,6 @@ mock.method(
 const app = Fastify();
 app.setValidatorCompiler(validatorCompiler);
 app.setSerializerCompiler(serializerCompiler);
-app.decorate("avatarCleanup", getAvatarCleanupService());
 app.decorateRequest("user", {
   getter: () =>
     authenticated

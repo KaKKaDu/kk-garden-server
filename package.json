@@ -16,6 +16,8 @@
     "test:avatar-storage": "tsx scripts/avatar-storage-smoke.ts",
     "test:avatar-image": "tsx scripts/avatar-image-smoke.ts",
     "test:avatar-upload": "tsx scripts/avatar-upload-smoke.ts",
+    "test:avatar-finalize": "tsx scripts/avatar-finalize-smoke.ts",
+    "test:avatar-owner": "tsx scripts/avatar-owner-smoke.ts",
     "signature-key-pair": "tsx scripts/signature-key-pair.ts",
     "shared": "npm install @kk-garden/shared@latest"
   },
