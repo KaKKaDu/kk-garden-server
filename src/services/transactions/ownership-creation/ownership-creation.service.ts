@@ -12,6 +12,7 @@ import type {
   VisualisationDto,
 } from "@kk-garden/shared/types";
 import type { ClientSession, Mongoose } from "mongoose";
+import type { AccountDeletionTombstoneService } from "@/services/account-deletion/account-deletion-tombstone.service.ts";
 
 export class OwnershipCreationService {
   constructor(
@@ -21,6 +22,7 @@ export class OwnershipCreationService {
     private readonly visualisationService: VisualisationService,
     private readonly visualisationPendingService: VisualisationPendingService,
     private readonly mongoService: MongoService,
+    private readonly tombstones: AccountDeletionTombstoneService,
   ) {}
 
   async createOwnershipTransaction(
@@ -36,6 +38,7 @@ export class OwnershipCreationService {
           const transactionResult: SuccessDataAny<Ownership> =
             await session.withTransaction(
               async (): Promise<SuccessDataAny<Ownership>> => {
+                await this.tombstones.assertMutationAllowed(ownerId, session);
                 const verifyUser: SuccessDataAny<User> =
                   await this.userService.getById(ownerId, session);
 

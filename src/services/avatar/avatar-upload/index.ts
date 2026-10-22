@@ -6,6 +6,7 @@ import { getAvatarCleanupService } from "@/services/avatar/avatar-cleanup/index.
 import { getProfileService } from "@/services/crud/profile/index.ts";
 import { getUserService } from "@/services/crud/user/index.ts";
 import { getMongoService } from "@/services/mongo/index.ts";
+import { getAccountDeletionTombstoneService } from "@/services/account-deletion/index.ts";
 
 const repositorySingleton: AvatarUploadRepository = new AvatarUploadRepository(
   getMongoService(),
@@ -17,6 +18,8 @@ const serviceSingleton: AvatarUploadService = new AvatarUploadService(
   getUserService(),
   getProfileService(),
   getAvatarImageService(),
+  getMongoService(),
+  getAccountDeletionTombstoneService(),
 );
 
 export const getAvatarUploadService = (): AvatarUploadService =>

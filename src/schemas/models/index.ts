@@ -34,3 +34,8 @@ export {
   parseOwnership,
 } from "./ownership.mongo.schema.ts";
 export { ProfileMongoSchema, parseProfile } from "./profile.mongo.schema.ts";
+export {
+  ACCOUNT_DELETION_TOMBSTONE_COLLECTION,
+  AccountDeletionTombstoneSchema,
+  type AccountDeletionTombstone,
+} from "./account-deletion-tombstone.mongo.schema.ts";

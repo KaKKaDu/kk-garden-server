@@ -35,6 +35,7 @@ import {
   getAvatarUploadService,
 } from "../src/services/avatar/avatar-upload/index.ts";
 import { getMongoService } from "../src/services/mongo/index.ts";
+import { getAccountDeletionTombstoneService } from "../src/services/account-deletion/index.ts";
 import { getProfileService } from "../src/services/crud/profile/index.ts";
 import type {
   ProfileAvatarFinalizeInput,
@@ -94,6 +95,8 @@ const service = new AvatarUploadService(
   userService,
   profileService,
   images,
+  getMongoService(),
+  getAccountDeletionTombstoneService(),
 );
 
 mock.method(

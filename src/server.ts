@@ -11,10 +11,16 @@ import { getEnvService } from "@/services/env/index.ts";
 import type { Nullable } from "@kk-garden/shared/types";
 import { parseClientOrigins } from "@/lib/auth/auth-origins.ts";
 import { getAvatarCleanupService } from "@/services/avatar/avatar-cleanup/index.ts";
+import { getAccountDeletionTombstoneService } from "@/services/account-deletion/index.ts";
 
 const avatarCleanupService = getAvatarCleanupService();
 
 void init(async (app: FastifyInstance) => {
+  const tombstoneInit = await getAccountDeletionTombstoneService().initialize();
+  if (!tombstoneInit.success) {
+    throw new Error("Account deletion tombstones could not be initialized");
+  }
+
   const rawTrustedOrigins: Nullable<string> =
     getEnvService().getRawEnvValue("CLIENT_ORIGINS");
   if (!rawTrustedOrigins) {

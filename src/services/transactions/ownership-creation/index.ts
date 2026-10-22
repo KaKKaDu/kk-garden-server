@@ -11,6 +11,7 @@ import { getOwnershipService } from "@/services/crud/ownership/index.ts";
 import type { MongoService } from "@/services/mongo/mongo.service.ts";
 import { getMongoService } from "@/services/mongo/index.ts";
 import { OwnershipCreationService } from "@/services/transactions/ownership-creation/ownership-creation.service.ts";
+import { getAccountDeletionTombstoneService } from "@/services/account-deletion/index.ts";
 
 const visualisationService: VisualisationService = getVisualisationService();
 const visualisationPendingService: VisualisationPendingService =
@@ -32,6 +33,7 @@ const ownershipCreationServiceSingleton: OwnershipCreationService =
     visualisationService,
     visualisationPendingService,
     mongoService,
+    getAccountDeletionTombstoneService(),
   );
 
 export const getOwnershipCreationService = (): OwnershipCreationService => {

@@ -64,33 +64,42 @@ export class AvatarUploadRepository {
     }, "AvatarUploadRepository.initialize");
   }
 
+  consumeIssueLimit(
+    ownerId: string,
+  ): Promise<SuccessDataAny<{ consumed: true }>> {
+    return this.mongoService.execute(async (): Promise<{ consumed: true }> => {
+      if (!this.limiter) {
+        throw new AppError({
+          status: 503,
+          message: "Avatar uploads are not ready",
+        });
+      }
+      try {
+        await this.limiter.consume(ownerId);
+      } catch (error: unknown) {
+        throw new AppError({
+          status: error instanceof RateLimiterRes ? 429 : 503,
+          message:
+            error instanceof RateLimiterRes
+              ? "Avatar upload limit reached; try again later"
+              : "Avatar upload rate limiter is unavailable",
+        });
+      }
+      return { consumed: true };
+    }, "AvatarUploadRepository.consumeIssueLimit");
+  }
+
   create(
     upload: ProfileAvatarUploadSession,
+    session: Nullable<ClientSession>,
   ): Promise<SuccessDataAny<ProfileAvatarUploadSession>> {
     return this.mongoService.execute(
       async (connection: Mongoose): Promise<ProfileAvatarUploadSession> => {
-        if (!this.limiter) {
-          throw new AppError({
-            status: 503,
-            message: "Avatar uploads are not ready",
-          });
-        }
         const payload = ProfileAvatarUploadSessionSchema.parse(upload);
         if (payload.state !== "pending" || payload.attempts !== 0) {
           throw new AppError({
             status: 400,
             message: "New avatar uploads must be pending",
-          });
-        }
-        try {
-          await this.limiter.consume(payload.ownerId);
-        } catch (error: unknown) {
-          throw new AppError({
-            status: error instanceof RateLimiterRes ? 429 : 503,
-            message:
-              error instanceof RateLimiterRes
-                ? "Avatar upload limit reached; try again later"
-                : "Avatar upload rate limiter is unavailable",
           });
         }
 
@@ -111,6 +120,7 @@ export class AvatarUploadRepository {
             $set: { state: "expired", updatedAt: now, finishedAt: now },
             $unset: { retryAt: "", lastFailure: "" },
           },
+          { session: session ?? undefined },
         );
         await uploads.updateMany(
           {
@@ -123,6 +133,7 @@ export class AvatarUploadRepository {
             $set: { state: "expired", updatedAt: now, finishedAt: now },
             $unset: { claim: "", candidateObjectKey: "" },
           },
+          { session: session ?? undefined },
         );
         await uploads.updateMany(
           {
@@ -140,9 +151,10 @@ export class AvatarUploadRepository {
             },
             $unset: { claim: "", candidateObjectKey: "" },
           },
+          { session: session ?? undefined },
         );
         try {
-          await uploads.insertOne(payload);
+          await uploads.insertOne(payload, { session: session ?? undefined });
         } catch (error: unknown) {
           const mongoDuplicate: boolean =
             error instanceof MongoServerError && error.code === 11000;

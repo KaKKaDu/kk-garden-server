@@ -5,6 +5,7 @@ import type { ErrorResponse } from "@kk-garden/shared/types";
 import { getAuthService } from "@/lib/auth/index.ts";
 import { HandleRouteError } from "@lib/route-error/route-error.ts";
 import { Logger } from "@lib/logs/logger.ts";
+import { getAccountDeletionTombstoneService } from "@/services/account-deletion/index.ts";
 
 export const authGuard = async (
   request: FastifyRequest,
@@ -27,11 +28,15 @@ export const authGuard = async (
 
     const session = await authResult.data.api.getSession({
       headers: fromNodeHeaders(request.headers),
+      query: { disableCookieCache: true },
     });
     if (!session) {
       throw new AppError({ status: 401, message: "Authentication required" });
     }
 
+    await getAccountDeletionTombstoneService().assertNotDeleted(
+      session.user.id,
+    );
     request.user = session.user;
     request.session = session.session;
   } catch (error: unknown) {

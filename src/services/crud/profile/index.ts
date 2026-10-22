@@ -7,6 +7,7 @@ import type { MongoService } from "@/services/mongo/mongo.service.ts";
 import { AvatarUploadRepository } from "@/services/avatar/avatar-upload/avatar-upload.repository.ts";
 import { getAvatarStorageService } from "@/services/avatar/avatar-storage/index.ts";
 import { getAvatarCleanupService } from "@/services/avatar/avatar-cleanup/index.ts";
+import { getAccountDeletionTombstoneService } from "@/services/account-deletion/index.ts";
 
 const mongoService: MongoService = getMongoService();
 const repository: ProfileRepository = new ProfileRepository(mongoService);
@@ -18,6 +19,7 @@ const serviceSingleton: ProfileService = new ProfileService(
   mongoService,
   getAvatarStorageService(),
   getAvatarCleanupService(),
+  getAccountDeletionTombstoneService(),
 );
 
 export const getProfileService = (): ProfileService => {

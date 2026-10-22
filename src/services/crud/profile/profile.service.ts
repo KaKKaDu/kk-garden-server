@@ -28,6 +28,7 @@ import type { AvatarCleanupService } from "@/services/avatar/avatar-cleanup/avat
 import type { MongoService } from "@/services/mongo/mongo.service.ts";
 import { transactional } from "@/types/mongo.types.ts";
 import { Logger } from "@lib/logs/logger.ts";
+import type { AccountDeletionTombstoneService } from "@/services/account-deletion/account-deletion-tombstone.service.ts";
 
 const requireData = <T extends object>(
   result: SuccessDataAny<T>,
@@ -51,6 +52,7 @@ export class ProfileService {
     private readonly mongoService: MongoService,
     private readonly avatarStorage: AvatarStorageService,
     private readonly avatarCleanup: AvatarCleanupService,
+    private readonly tombstones: AccountDeletionTombstoneService,
   ) {}
 
   async getProfile(
@@ -145,53 +147,66 @@ export class ProfileService {
     fields: ProfileUpdateFields,
   ): Promise<SuccessDataAny<ProfileOwnerResponse>> {
     try {
-      const userResult: SuccessDataAny<User> =
-        await this.userService.getById.direct(userId);
-      if (!userResult.success) {
+      const updateResult = await this.mongoService.execute<{ updated: true }>(
+        async (db): Promise<{ updated: true }> => {
+          const session = await db.startSession();
+          try {
+            const transactionResult = await session.withTransaction(
+              async (): Promise<{ updated: true }> => {
+                const user: User = requireData(
+                  await this.userService.getById(userId, session),
+                  "Profile owner lookup failed",
+                );
+                if (user.status !== "active") {
+                  throw new AppError({
+                    status: 403,
+                    message: "Only active accounts can update profiles",
+                  });
+                }
+
+                const updated: ProfileLookup = requireData(
+                  await this.updateFields(userId, fields, session),
+                  "Profile update failed",
+                );
+                if (!updated.profile) {
+                  throw new AppError({
+                    status: 400,
+                    message: "A display name is required to create a profile",
+                  });
+                }
+                return { updated: true };
+              },
+            );
+            if (!transactionResult) {
+              throw new AppError({
+                status: 503,
+                message: "Profile update transaction did not complete",
+              });
+            }
+            return transactionResult;
+          } finally {
+            await session.endSession();
+          }
+        },
+        "ProfileService.updateProfile",
+      );
+      if (!updateResult.success || !updateResult.data) {
         const failedResult: SuccessDataAny<ProfileOwnerResponse> = {
           success: false,
-          errors: userResult.errors,
+          errors: updateResult.success
+            ? [
+                new AppError({
+                  status: 503,
+                  message: "Profile update transaction returned no data",
+                }),
+              ]
+            : updateResult.errors,
         };
         Logger.report("ProfileService.updateProfile", failedResult);
         return failedResult;
       }
-      if (!userResult.data) {
-        throw new AppError({
-          status: 500,
-          message: "Profile owner lookup returned no data",
-        });
-      }
-      if (userResult.data.status !== "active") {
-        throw new AppError({
-          status: 403,
-          message: "Only active accounts can update profiles",
-        });
-      }
 
-      const updateResult: SuccessDataAny<ProfileLookup> =
-        await this.updateFields.direct(userId, fields);
-      if (!updateResult.success) {
-        const failedResult: SuccessDataAny<ProfileOwnerResponse> = {
-          success: false,
-          errors: updateResult.errors,
-        };
-        Logger.report("ProfileService.updateProfile", failedResult);
-        return failedResult;
-      }
-      if (!updateResult.data) {
-        throw new AppError({
-          status: 500,
-          message: "Profile update returned no data",
-        });
-      }
-      if (!updateResult.data.profile) {
-        throw new AppError({
-          status: 400,
-          message: "A display name is required to create a profile",
-        });
-      }
-
-      return this.getProfile(userId);
+      return await this.getProfile(userId);
     } catch (error: unknown) {
       const result: SuccessDataAny<ProfileOwnerResponse> =
         handleError<ProfileOwnerResponse>(error);
@@ -231,8 +246,48 @@ export class ProfileService {
           }),
           "Avatar cleanup could not be scheduled",
         );
+        const clearResult =
+          await this.mongoService.execute<ProfileAvatarReferenceChange>(
+            async (db): Promise<ProfileAvatarReferenceChange> => {
+              const session = await db.startSession();
+              try {
+                const transactionResult = await session.withTransaction(
+                  async (): Promise<ProfileAvatarReferenceChange> => {
+                    const currentUser: User = requireData(
+                      await this.userService.getById(userId, session),
+                      "Avatar owner lookup failed",
+                    );
+                    if (currentUser.status !== "active") {
+                      throw new AppError({
+                        status: 403,
+                        message: "Only active accounts can remove avatars",
+                      });
+                    }
+                    return requireData(
+                      await this.clearAvatarObjectKeyIfCurrent(
+                        userId,
+                        objectKey,
+                        session,
+                      ),
+                      "Profile avatar could not be cleared",
+                    );
+                  },
+                );
+                if (!transactionResult) {
+                  throw new AppError({
+                    status: 503,
+                    message: "Avatar removal transaction did not complete",
+                  });
+                }
+                return transactionResult;
+              } finally {
+                await session.endSession();
+              }
+            },
+            "ProfileService.removeAvatar",
+          );
         const cleared: ProfileAvatarReferenceChange = requireData(
-          await this.clearAvatarObjectKeyIfCurrent.direct(userId, objectKey),
+          clearResult,
           "Profile avatar could not be cleared",
         );
         if (!cleared.previousProfile) {
@@ -380,6 +435,7 @@ export class ProfileService {
       fields: ProfileUpdateFields,
       session: Nullable<ClientSession>,
     ): Promise<SuccessDataAny<ProfileLookup>> => {
+      await this.tombstones.assertMutationAllowed(userId, session);
       return this.repository.updateFields(userId, fields, session);
     },
   );
@@ -390,6 +446,7 @@ export class ProfileService {
       objectKey: string,
       session: Nullable<ClientSession>,
     ): Promise<SuccessDataAny<ProfileAvatarReferenceChange>> => {
+      await this.tombstones.assertMutationAllowed(userId, session);
       return this.repository.setAvatarObjectKey(userId, objectKey, session);
     },
   );
@@ -401,6 +458,7 @@ export class ProfileService {
       expectedObjectKey: Nullable<string>,
       session: Nullable<ClientSession>,
     ): Promise<SuccessDataAny<ProfileAvatarReferenceChange>> => {
+      await this.tombstones.assertMutationAllowed(userId, session);
       return this.repository.setAvatarObjectKeyIfCurrent(
         userId,
         objectKey,
@@ -416,6 +474,7 @@ export class ProfileService {
       expectedObjectKey: string,
       session: Nullable<ClientSession>,
     ): Promise<SuccessDataAny<ProfileAvatarReferenceChange>> => {
+      await this.tombstones.assertMutationAllowed(userId, session);
       return this.repository.clearAvatarObjectKeyIfCurrent(
         userId,
         expectedObjectKey,

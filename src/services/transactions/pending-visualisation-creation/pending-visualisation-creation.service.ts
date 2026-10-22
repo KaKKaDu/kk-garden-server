@@ -6,11 +6,13 @@ import type {
 import type { VisualisationPendingService } from "@/services/crud/visualisation-pending/visualisation-pending.service.ts";
 import type { MongoService } from "@/services/mongo/mongo.service.ts";
 import type { ClientSession, Mongoose } from "mongoose";
+import type { AccountDeletionTombstoneService } from "@/services/account-deletion/account-deletion-tombstone.service.ts";
 
 export class PendingVisualisationCreationService {
   constructor(
     private readonly visualisationPendingService: VisualisationPendingService,
     private readonly mongoService: MongoService,
+    private readonly tombstones: AccountDeletionTombstoneService,
   ) {}
 
   async createPendingVisualisationsTransaction(
@@ -26,6 +28,7 @@ export class PendingVisualisationCreationService {
           const transactionResult: SuccessDataAny<VisualisationPendingDto[]> =
             await session.withTransaction(
               async (): Promise<SuccessDataAny<VisualisationPendingDto[]>> => {
+                await this.tombstones.assertMutationAllowed(ownerId, session);
                 const pendingVisualisations: VisualisationPendingDto[] = [];
 
                 for (const generation of generations) {

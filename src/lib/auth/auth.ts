@@ -12,6 +12,7 @@ import {
   validateAuthBaseUrl,
 } from "@/lib/auth/auth-origins.ts";
 import { getAuthSecurityOptions } from "@/lib/auth/auth-security-config.ts";
+import { ACCOUNT_DELETION_TOMBSTONE_COLLECTION } from "@/schemas/models/account-deletion-tombstone.mongo.schema.ts";
 import { getEnvService } from "@/services/env/index.ts";
 import {
   authEmailVariables,
@@ -140,6 +141,17 @@ export const createAuthInstance = async (): Promise<
         },
         session: {
           create: {
+            before: async (session): Promise<false | void> => {
+              const tombstone = await authDb.db
+                .collection(ACCOUNT_DELETION_TOMBSTONE_COLLECTION)
+                .findOne(
+                  { userId: session.userId },
+                  { projection: { _id: 1 } },
+                );
+              if (tombstone) {
+                return false;
+              }
+            },
             after: async (_session, context): Promise<void> => {
               Logger.info(
                 JSON.stringify({

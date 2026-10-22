@@ -18,6 +18,7 @@ import type {
   ProfileAvatarUploadSession,
   User,
 } from "@kk-garden/shared/types";
+import type { ClientSession, Mongoose } from "mongoose";
 import type { AvatarCleanupService } from "@/services/avatar/avatar-cleanup/avatar-cleanup.service.ts";
 import type { AvatarImageService } from "@/services/avatar/avatar-image/avatar-image.service.ts";
 import type { AvatarStorageService } from "@/services/avatar/avatar-storage/avatar-storage.service.ts";
@@ -34,6 +35,8 @@ import type {
 } from "@/services/crud/profile/types.ts";
 import type { ProfileService } from "@/services/crud/profile/profile.service.ts";
 import type { UserService } from "@/services/crud/user/user.service.ts";
+import type { MongoService } from "@/services/mongo/mongo.service.ts";
+import type { AccountDeletionTombstoneService } from "@/services/account-deletion/account-deletion-tombstone.service.ts";
 import { Logger } from "@lib/logs/logger.ts";
 import { Variables } from "@lib/variables/variables.ts";
 
@@ -58,6 +61,8 @@ export class AvatarUploadService {
     private readonly users: UserService,
     private readonly profiles: ProfileService,
     private readonly images: AvatarImageService,
+    private readonly mongoService: MongoService,
+    private readonly tombstones: AccountDeletionTombstoneService,
   ) {}
 
   initialize(): Promise<SuccessDataAny<{ ready: true }>> {
@@ -98,9 +103,51 @@ export class AvatarUploadService {
         retryAt: now,
       };
       this.requireData(
-        await this.repository.create(upload),
-        "Avatar upload could not be saved",
+        await this.repository.consumeIssueLimit(ownerId),
+        "Avatar upload limit could not be checked",
       );
+      const creationResult =
+        await this.mongoService.execute<ProfileAvatarUploadSession>(
+          async (db: Mongoose): Promise<ProfileAvatarUploadSession> => {
+            const session: ClientSession = await db.startSession();
+            try {
+              const transactionResult =
+                await session.withTransaction<ProfileAvatarUploadSession>(
+                  async (): Promise<ProfileAvatarUploadSession> => {
+                    await this.tombstones.assertMutationAllowed(
+                      ownerId,
+                      session,
+                    );
+                    const currentUser: User = this.requireData(
+                      await this.users.getById(ownerId, session),
+                      "Avatar owner lookup failed",
+                    );
+                    if (currentUser.status !== "active") {
+                      throw new AppError({
+                        status: 403,
+                        message: "Only active accounts can upload avatars",
+                      });
+                    }
+                    return this.requireData(
+                      await this.repository.create(upload, session),
+                      "Avatar upload could not be saved",
+                    );
+                  },
+                );
+              if (!transactionResult) {
+                throw new AppError({
+                  status: 503,
+                  message: "Avatar upload transaction did not complete",
+                });
+              }
+              return transactionResult;
+            } finally {
+              await session.endSession();
+            }
+          },
+          "AvatarUploadService.issue",
+        );
+      this.requireData(creationResult, "Avatar upload could not be saved");
       await this.enqueueCleanup(ownerId, {
         kind: "staging",
         uploadId: upload._id,
