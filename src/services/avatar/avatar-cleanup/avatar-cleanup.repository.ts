@@ -13,6 +13,7 @@ import type {
 } from "@kk-garden/shared/types";
 import { handleError, type SuccessDataAny } from "@kk-garden/shared/errors";
 import type { MongoService } from "@/services/mongo/mongo.service.ts";
+import { getConfiguredMongoDatabase } from "@/services/mongo/mongo.repository.ts";
 import type {
   AvatarCleanupContext,
   AvatarCleanupData,
@@ -39,7 +40,7 @@ export class AvatarCleanupRepository {
       if (this.agenda) {
         throw new Error("Avatar cleanup is already started");
       }
-      const db = connection.connection.getClient().db();
+      const db = getConfiguredMongoDatabase(connection);
       const legacyJob = await db
         .collection(cleanupVariables.get("collection-name"))
         .findOne({ state: { $exists: true } }, { projection: { _id: 1 } });
@@ -127,7 +128,7 @@ export class AvatarCleanupRepository {
   ): Promise<SuccessDataAny<AvatarCleanupContext>> {
     return this.mongoService.execute(
       async (connection: Mongoose): Promise<AvatarCleanupContext> => {
-        const db = connection.connection.getClient().db();
+        const db = getConfiguredMongoDatabase(connection);
         const profiles = db.collection<Profile>("profiles");
         const uploads = db.collection<ProfileAvatarUploadSession>(
           "profile_avatar_upload_sessions",
@@ -157,6 +158,57 @@ export class AvatarCleanupRepository {
         };
       },
       "AvatarCleanupRepository.getContext",
+    );
+  }
+
+  removeAccountUploadIfComplete(
+    uploadId: string,
+    ownerId: string,
+    currentJobId: string,
+  ): Promise<SuccessDataAny<{ removed: boolean }>> {
+    return this.mongoService.execute(
+      async (connection: Mongoose): Promise<{ removed: boolean }> => {
+        if (!this.agenda) {
+          throw new Error("Avatar cleanup has not started");
+        }
+        const db = getConfiguredMongoDatabase(connection);
+        const uploads = db.collection<ProfileAvatarUploadSession>(
+          "profile_avatar_upload_sessions",
+        );
+        const upload = await uploads.findOne({ _id: uploadId, ownerId });
+        if (!upload) {
+          return { removed: true };
+        }
+
+        const objectKeys = [
+          upload.stagingObjectKey,
+          ...(upload.state === "processing"
+            ? [upload.candidateObjectKey]
+            : upload.state === "completed"
+              ? [upload.result.objectKey]
+              : []),
+        ];
+        for (const objectKey of new Set(objectKeys)) {
+          const jobs = await this.agenda.queryJobs({
+            name: cleanupVariables.get("job-name"),
+            data: { target: { objectKey } },
+          });
+          const cleanupJob = jobs.jobs[0];
+          if (!cleanupJob) {
+            return { removed: false };
+          }
+          if (
+            String(cleanupJob._id) !== currentJobId &&
+            cleanupJob.state !== "completed"
+          ) {
+            return { removed: false };
+          }
+        }
+
+        await uploads.deleteOne({ _id: uploadId, ownerId });
+        return { removed: true };
+      },
+      "AvatarCleanupRepository.removeAccountUploadIfComplete",
     );
   }
 }

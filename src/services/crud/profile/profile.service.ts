@@ -21,28 +21,16 @@ import type {
   ProfileLookup,
   ProfileUpdateFields,
 } from "@/services/crud/profile/types.ts";
+import type { ProfileLookupService } from "@/services/crud/profile-lookup/profile-lookup.service.ts";
 import type { UserService } from "@/services/crud/user/user.service.ts";
 import type { AvatarUploadRepository } from "@/services/avatar/avatar-upload/avatar-upload.repository.ts";
 import type { AvatarStorageService } from "@/services/avatar/avatar-storage/avatar-storage.service.ts";
 import type { AvatarCleanupService } from "@/services/avatar/avatar-cleanup/avatar-cleanup.service.ts";
 import type { MongoService } from "@/services/mongo/mongo.service.ts";
 import { transactional } from "@/types/mongo.types.ts";
+import { requireData } from "@/utils/require-data.ts";
 import { Logger } from "@lib/logs/logger.ts";
 import type { AccountDeletionTombstoneService } from "@/services/account-deletion/account-deletion-tombstone.service.ts";
-
-const requireData = <T extends object>(
-  result: SuccessDataAny<T>,
-  fallback: string,
-): T => {
-  if (!result.success || !result.data) {
-    const error = result.success ? undefined : result.errors[0];
-    throw new AppError({
-      status: error?.status ?? 503,
-      message: error?.message ?? fallback,
-    });
-  }
-  return result.data;
-};
 
 export class ProfileService {
   constructor(
@@ -53,6 +41,7 @@ export class ProfileService {
     private readonly avatarStorage: AvatarStorageService,
     private readonly avatarCleanup: AvatarCleanupService,
     private readonly tombstones: AccountDeletionTombstoneService,
+    private readonly lookupService: ProfileLookupService,
   ) {}
 
   async getProfile(
@@ -99,7 +88,26 @@ export class ProfileService {
         });
       }
 
-      const profile: Nullable<Profile> = profileResult.data.profile;
+      const ownerProfileResult: SuccessDataAny<ProfileLookup> =
+        await this.lookupService.ensureOwnerProfile(
+          userId,
+          profileResult.data.profile,
+        );
+      if (!ownerProfileResult.success) {
+        const failedResult: SuccessDataAny<ProfileOwnerResponse> = {
+          success: false,
+          errors: ownerProfileResult.errors,
+        };
+        Logger.report("ProfileService.getProfile", failedResult);
+        return failedResult;
+      }
+      if (!ownerProfileResult.data) {
+        throw new AppError({
+          status: 500,
+          message: "Profile lookup code assignment returned no data",
+        });
+      }
+      const profile: Nullable<Profile> = ownerProfileResult.data.profile;
       const customHex: Nullable<string> = profile?.accentHex;
       const palette = createProfilePalette(
         customHex ?? DEFAULT_PROFILE_ACCENT_HEX,
@@ -121,11 +129,13 @@ export class ProfileService {
             ...(profile.bio ? { bio: profile.bio } : {}),
             accent,
             avatar,
+            lookupCode: profile?.lookupCode ?? null,
           }
         : {
             configured: false,
             accent,
             avatar: null,
+            lookupCode: null,
           };
 
       const result: SuccessDataAny<ProfileOwnerResponse> = {

@@ -8,6 +8,7 @@ import {
   type AccountDeletionTombstone,
 } from "@/schemas/models/account-deletion-tombstone.mongo.schema.ts";
 import type { MongoService } from "@/services/mongo/mongo.service.ts";
+import { getConfiguredMongoDatabase } from "@/services/mongo/mongo.repository.ts";
 import { transactional } from "@/types/mongo.types.ts";
 
 type AccountDeletionTombstoneLookup = {
@@ -32,9 +33,7 @@ export class AccountDeletionTombstoneRepository {
   initialize(): Promise<SuccessDataAny<{ ready: true }>> {
     return this.mongoService.execute(
       async (connection: Mongoose): Promise<{ ready: true }> => {
-        await connection.connection
-          .getClient()
-          .db()
+        await getConfiguredMongoDatabase(connection)
           .collection<AccountDeletionTombstone>(
             ACCOUNT_DELETION_TOMBSTONE_COLLECTION,
           )
@@ -61,9 +60,7 @@ export class AccountDeletionTombstoneRepository {
         async (
           connection: Mongoose,
         ): Promise<AccountDeletionTombstoneLookup> => {
-          const tombstone = await connection.connection
-            .getClient()
-            .db()
+          const tombstone = await getConfiguredMongoDatabase(connection)
             .collection<AccountDeletionTombstone>(
               ACCOUNT_DELETION_TOMBSTONE_COLLECTION,
             )
@@ -106,7 +103,7 @@ export class AccountDeletionTombstoneRepository {
 
       return this.mongoService.execute(
         async (connection: Mongoose): Promise<AccountMutationFence> => {
-          const db = connection.connection.getClient().db();
+          const db = getConfiguredMongoDatabase(connection);
           const tombstone = await db
             .collection<AccountDeletionTombstone>(
               ACCOUNT_DELETION_TOMBSTONE_COLLECTION,
@@ -174,9 +171,7 @@ export class AccountDeletionTombstoneRepository {
         async (connection: Mongoose): Promise<AccountDeletionTombstone> => {
           const payload: AccountDeletionTombstone =
             AccountDeletionTombstoneSchema.parse(tombstone);
-          await connection.connection
-            .getClient()
-            .db()
+          await getConfiguredMongoDatabase(connection)
             .collection<AccountDeletionTombstone>(
               ACCOUNT_DELETION_TOMBSTONE_COLLECTION,
             )

@@ -1,8 +1,13 @@
 import { betterAuth, type BetterAuthOptions } from "better-auth";
-import { createAuthMiddleware, freshSessionMiddleware } from "better-auth/api";
+import {
+  APIError,
+  createAuthMiddleware,
+  freshSessionMiddleware,
+} from "better-auth/api";
 import { mongodbAdapter } from "better-auth/adapters/mongodb";
 import { admin, emailOTP } from "better-auth/plugins";
 import { passkey } from "@better-auth/passkey";
+import { ObjectId } from "mongodb";
 import { handleError, type SuccessDataAny } from "@kk-garden/shared/errors";
 import type { Nullable } from "@kk-garden/shared/types";
 import { Logger } from "@lib/logs/logger.ts";
@@ -12,7 +17,7 @@ import {
   validateAuthBaseUrl,
 } from "@/lib/auth/auth-origins.ts";
 import { getAuthSecurityOptions } from "@/lib/auth/auth-security-config.ts";
-import { ACCOUNT_DELETION_TOMBSTONE_COLLECTION } from "@/schemas/models/account-deletion-tombstone.mongo.schema.ts";
+import { getAccountDeletionTombstoneService } from "@/services/account-deletion/index.ts";
 import { getEnvService } from "@/services/env/index.ts";
 import {
   authEmailVariables,
@@ -28,8 +33,13 @@ const sensitiveAuthPaths: Set<string> = new Set([
   "/email-otp/request-email-change",
 ]);
 
-const requireFreshSensitiveSession = createAuthMiddleware(
+const requireAccountDeletionLifecycle = createAuthMiddleware(
   async (ctx): Promise<void> => {
+    if (ctx.path === "/admin/remove-user") {
+      throw new APIError("FORBIDDEN", {
+        message: "Use the account deletion endpoint",
+      });
+    }
     if (sensitiveAuthPaths.has(ctx.path)) {
       await freshSessionMiddleware(ctx);
     }
@@ -122,7 +132,7 @@ export const createAuthInstance = async (): Promise<
       baseURL: validatedBaseUrl,
       trustedOrigins,
       hooks: {
-        before: requireFreshSensitiveSession,
+        before: requireAccountDeletionLifecycle,
         after: emailDelivery.after,
       },
       ...getAuthSecurityOptions(isProduction),
@@ -142,13 +152,11 @@ export const createAuthInstance = async (): Promise<
         session: {
           create: {
             before: async (session): Promise<false | void> => {
-              const tombstone = await authDb.db
-                .collection(ACCOUNT_DELETION_TOMBSTONE_COLLECTION)
-                .findOne(
-                  { userId: session.userId },
-                  { projection: { _id: 1 } },
+              const deleted: boolean =
+                await getAccountDeletionTombstoneService().isDeleted(
+                  session.userId,
                 );
-              if (tombstone) {
+              if (deleted) {
                 return false;
               }
             },
@@ -160,6 +168,52 @@ export const createAuthInstance = async (): Promise<
                   path: context?.path ?? "unknown",
                 }),
               );
+            },
+          },
+        },
+        verification: {
+          create: {
+            before: async (verification): Promise<false | void> => {
+              const email =
+                /^(?:sign-in|email-verification|forget-password)-otp-(.+)$/i.exec(
+                  verification.identifier,
+                )?.[1];
+              if (!email) {
+                return;
+              }
+
+              const users = authDb.db.collection<{
+                _id: ObjectId | string;
+                updatedAt?: Date;
+              }>("user");
+              const user = await users.findOne(
+                { email: email.toLowerCase() },
+                { projection: { _id: 1, updatedAt: 1 } },
+              );
+              if (!user) {
+                return;
+              }
+
+              const previousUpdatedAt = user.updatedAt;
+              const updatedAtFilter = previousUpdatedAt
+                ? { updatedAt: previousUpdatedAt }
+                : { updatedAt: { $exists: false } };
+              const touched = await users.updateOne(
+                { _id: user._id, ...updatedAtFilter },
+                {
+                  $set: {
+                    updatedAt: new Date(
+                      Math.max(
+                        Date.now(),
+                        (previousUpdatedAt?.getTime() ?? 0) + 1,
+                      ),
+                    ),
+                  },
+                },
+              );
+              if (touched.matchedCount !== 1) {
+                return false;
+              }
             },
           },
         },

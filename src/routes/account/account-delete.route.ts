@@ -1,0 +1,59 @@
+import {
+  DeleteAccountRequestSchema,
+  DeleteAccountResponseSchema,
+  ErrorSchema,
+} from "@kk-garden/shared/schemas";
+import { AppError, type SuccessDataAny } from "@kk-garden/shared/errors";
+import type { ErrorResponse, Nullable } from "@kk-garden/shared/types";
+import type { FastifyInstance } from "fastify";
+import type { ZodTypeProvider } from "fastify-type-provider-zod";
+import { getAccountDeletionService } from "@/services/account-deletion/index.ts";
+import type { RouteFactory } from "@/types/route.types.ts";
+import { HandleRouteError } from "@lib/route-error/route-error.ts";
+
+export const accountDeleteRoute: RouteFactory = (
+  fastify: FastifyInstance,
+): void => {
+  fastify.withTypeProvider<ZodTypeProvider>().delete(
+    "/",
+    {
+      prefixTrailingSlash: "no-slash",
+      schema: {
+        body: DeleteAccountRequestSchema,
+        response: {
+          202: DeleteAccountResponseSchema,
+          "4xx": ErrorSchema,
+          "5xx": ErrorSchema,
+        },
+      },
+    },
+    async (request, reply): Promise<void> => {
+      reply.header("Cache-Control", "private, no-store");
+      try {
+        const userId: Nullable<string> = request.user?.id;
+        if (!userId || !request.session) {
+          throw new AppError({
+            status: 401,
+            message: "Authentication required",
+          });
+        }
+
+        const result: SuccessDataAny<{ deleted: true }> =
+          await getAccountDeletionService().deleteAccount(userId);
+        if (!result.success || !result.data) {
+          const error: ErrorResponse = HandleRouteError.success(
+            result as SuccessDataAny<{ deleted: true }> & {
+              success: false;
+            },
+          );
+          reply.status(error.statusCode).send(error);
+          return;
+        }
+        reply.status(202).send({ success: true });
+      } catch (error: unknown) {
+        const response: ErrorResponse = HandleRouteError.raw(error);
+        reply.status(response.statusCode).send(response);
+      }
+    },
+  );
+};

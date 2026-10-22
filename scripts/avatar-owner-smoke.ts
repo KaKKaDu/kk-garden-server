@@ -21,11 +21,10 @@ import type { AvatarCleanupData } from "../src/services/avatar/avatar-cleanup/ty
 import { getAvatarStorageService } from "../src/services/avatar/avatar-storage/index.ts";
 import type { AvatarStorageSignedUrl } from "../src/services/avatar/avatar-storage/types.ts";
 import { getProfileService } from "../src/services/crud/profile/index.ts";
-import type { ProfileAvatarReferenceChange } from "../src/services/crud/profile/types.ts";
 import { getUserService } from "../src/services/crud/user/index.ts";
 import { profileAvatarDeleteRoute } from "../src/routes/profile/avatar/delete/profile-avatar-delete.route.ts";
 import { profileRootGetRoute } from "../src/routes/profile/root/profile-root.get.route.ts";
-import { addProfileMutationOriginGuard } from "../src/routes/profile/profile.routes.ts";
+import { addMutationOriginGuard } from "../src/lib/routes/mutation-origin-guard.ts";
 
 /* eslint-disable no-console */
 
@@ -129,34 +128,32 @@ mock.method(
   },
 );
 mock.method(
-  profiles.clearAvatarObjectKeyIfCurrent,
-  "direct",
-  async (
-    id: string,
-    expectedObjectKey: string,
-  ): Promise<SuccessDataAny<ProfileAvatarReferenceChange>> => {
+  profiles,
+  "removeAvatar",
+  async (id: string): Promise<SuccessDataAny<{ success: true }>> => {
+    if (userStatus !== "active") {
+      return failed<{ success: true }>(403);
+    }
+    const expectedObjectKey = currentAvatarKey;
+    if (!expectedObjectKey) {
+      return { success: true, data: { success: true } };
+    }
+    const queued = await cleanup.enqueue({
+      ownerId: id,
+      target: { kind: "displaced-avatar", objectKey: expectedObjectKey },
+    });
+    if (!queued.success) {
+      return { success: false, errors: queued.errors };
+    }
     clearCalls++;
     order.push("clear");
     assert.equal(id, ownerId);
     if (simulateRace) {
       currentAvatarKey = replacementKey;
-      return {
-        success: true,
-        data: { previousProfile: null, displacedAvatarObjectKey: null },
-      };
+      return failed<{ success: true }>(409);
     }
-    if (currentAvatarKey !== expectedObjectKey) {
-      return {
-        success: true,
-        data: { previousProfile: null, displacedAvatarObjectKey: null },
-      };
-    }
-    const previousProfile: Nullable<Profile> = profileSnapshot();
     currentAvatarKey = null;
-    return {
-      success: true,
-      data: { previousProfile, displacedAvatarObjectKey: expectedObjectKey },
-    };
+    return { success: true, data: { success: true } };
   },
 );
 
@@ -185,7 +182,7 @@ await app.register(
 );
 
 const originApp = Fastify();
-addProfileMutationOriginGuard(originApp, ["https://client.example.test"]);
+addMutationOriginGuard(originApp, ["https://client.example.test"]);
 originApp.get("/profile", async () => ({ success: true }));
 originApp.post("/profile", async () => ({ success: true }));
 

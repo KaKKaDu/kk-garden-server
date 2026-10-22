@@ -8,6 +8,7 @@ import {
   type UserStatusSignals,
 } from "@/lib/auth/derive-user-status.ts";
 import type { MongoService } from "@/services/mongo/mongo.service.ts";
+import { getConfiguredMongoDatabase } from "@/services/mongo/mongo.repository.ts";
 import { transactional } from "@/types/mongo.types.ts";
 
 import { Variables } from "@lib/variables/variables.ts";
@@ -30,10 +31,9 @@ export class UserRepository {
   constructor(private readonly mongoService: MongoService) {}
 
   private getCollection(db: Mongoose): Collection<BetterAuthUserDocument> {
-    return db.connection
-      .getClient()
-      .db()
-      .collection<BetterAuthUserDocument>(userVariables.get("collection-name"));
+    return getConfiguredMongoDatabase(db).collection<BetterAuthUserDocument>(
+      userVariables.get("collection-name"),
+    );
   }
 
   private toDto(document: BetterAuthUserDocument): User {

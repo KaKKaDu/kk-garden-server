@@ -12,6 +12,8 @@ import type { Nullable } from "@kk-garden/shared/types";
 import { parseClientOrigins } from "@/lib/auth/auth-origins.ts";
 import { getAvatarCleanupService } from "@/services/avatar/avatar-cleanup/index.ts";
 import { getAccountDeletionTombstoneService } from "@/services/account-deletion/index.ts";
+import { accountRoutes } from "@/routes/account/account.routes.ts";
+import { addMutationOriginGuard } from "@lib/routes/mutation-origin-guard.ts";
 
 const avatarCleanupService = getAvatarCleanupService();
 
@@ -31,14 +33,15 @@ void init(async (app: FastifyInstance) => {
     process.env.NODE_ENV === "production",
   );
 
+  await app.withTypeProvider<ZodTypeProvider>().register(cors, {
+    origin: trustedOrigins,
+    credentials: true,
+    methods: ["GET", "HEAD", "POST", "PATCH", "DELETE"],
+  });
+  addMutationOriginGuard(app, trustedOrigins);
   await app
-    .withTypeProvider<ZodTypeProvider>()
-    .register(cors, {
-      origin: trustedOrigins,
-      credentials: true,
-      methods: ["GET", "HEAD", "POST", "PATCH", "DELETE"],
-    })
     .register(authRoutes, { prefix: "/api/auth" })
+    .register(accountRoutes, { prefix: "/account" })
     .register(profileRoutes, { prefix: "/profile" })
     .register(generateRoutes, { prefix: "/generate" })
     .register(assignRoutes, { prefix: "/assign" })

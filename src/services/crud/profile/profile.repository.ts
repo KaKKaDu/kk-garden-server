@@ -1,4 +1,3 @@
-import { MongoServerError } from "mongodb";
 import type { SuccessDataAny } from "@kk-garden/shared/errors";
 import {
   ProfileAccentHexSchema,
@@ -52,15 +51,6 @@ export class ProfileRepository {
       ...raw,
       _id: String(raw._id),
     });
-  }
-
-  private isProfileIdCollision(error: unknown): boolean {
-    const isDuplicateKey: boolean =
-      error instanceof MongoServerError && error.code === 11000;
-    const hasProfileIdKey: boolean =
-      error instanceof MongoServerError && Boolean(error.keyPattern?._id);
-    const isProfileIdCollision: boolean = isDuplicateKey && hasProfileIdKey;
-    return isProfileIdCollision;
   }
 
   getById = transactional(
@@ -146,32 +136,9 @@ export class ProfileRepository {
             session: session ?? undefined,
           };
 
-          let document: Nullable<DocumentLike>;
-          try {
-            document = await model
-              .findOneAndUpdate({ _id: userId }, update, options)
-              .exec();
-          } catch (error: unknown) {
-            const hasNoTransaction: boolean = !session;
-            const createsProfile: boolean = canCreateProfile;
-            const profileIdCollision: boolean =
-              this.isProfileIdCollision(error);
-            const canRetryCollision: boolean =
-              hasNoTransaction && createsProfile && profileIdCollision;
-            if (canRetryCollision) {
-              document = await model
-                .findOneAndUpdate({ _id: userId }, update, {
-                  ...options,
-                  upsert: false,
-                })
-                .exec();
-              if (!document) {
-                throw error;
-              }
-            } else {
-              throw error;
-            }
-          }
+          const document: Nullable<DocumentLike> = await model
+            .findOneAndUpdate({ _id: userId }, update, options)
+            .exec();
 
           return {
             profile: document ? this.toDto(document) : null,

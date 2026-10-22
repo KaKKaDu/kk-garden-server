@@ -5,7 +5,11 @@ import {
   serializerCompiler,
   validatorCompiler,
 } from "fastify-type-provider-zod";
-import { AppError, type SuccessDataAny } from "@kk-garden/shared/errors";
+import {
+  AppError,
+  type DataObject,
+  type SuccessDataAny,
+} from "@kk-garden/shared/errors";
 import {
   ProfileAvatarUploadResponseSchema,
   ProfileAvatarUploadSessionSchema,
@@ -16,6 +20,7 @@ import type {
   User,
   UserStatus,
 } from "@kk-garden/shared/types";
+import type { Mongoose } from "mongoose";
 import { AvatarUploadRepository } from "../src/services/avatar/avatar-upload/avatar-upload.repository.ts";
 import { AvatarStorageService } from "../src/services/avatar/avatar-storage/avatar-storage.service.ts";
 import { AvatarCleanupService } from "../src/services/avatar/avatar-cleanup/avatar-cleanup.service.ts";
@@ -26,6 +31,8 @@ import type {
 } from "../src/services/avatar/avatar-storage/types.ts";
 import { getUserService } from "../src/services/crud/user/index.ts";
 import { profileAvatarUploadRoute } from "../src/routes/profile/avatar/upload/profile-avatar-upload.route.ts";
+import { getMongoService } from "../src/services/mongo/index.ts";
+import { getAccountDeletionTombstoneService } from "../src/services/account-deletion/index.ts";
 
 /* eslint-disable no-console */
 
@@ -43,6 +50,60 @@ mock.method(AvatarUploadRepository.prototype, "initialize", async () => ({
   success: true,
   data: { ready: true },
 }));
+const fakeSession = {
+  withTransaction: async <T>(callback: () => Promise<T>): Promise<T> =>
+    callback(),
+  endSession: async (): Promise<void> => undefined,
+};
+const fakeConnection = {
+  startSession: async () => fakeSession,
+  connection: {
+    getClient: () => ({
+      db: () => ({
+        collection: (name: string) => ({
+          findOne: async () =>
+            name === "user"
+              ? {
+                  _id: "owner",
+                  email: "owner@example.test",
+                  role: "user",
+                }
+              : null,
+        }),
+      }),
+    }),
+  },
+} as unknown as Mongoose;
+mock.method(
+  getMongoService(),
+  "execute",
+  async <T extends DataObject>(
+    callback: (connection: Mongoose) => Promise<T>,
+  ): Promise<SuccessDataAny<T>> => {
+    try {
+      return { success: true, data: await callback(fakeConnection) };
+    } catch (error: unknown) {
+      return {
+        success: false,
+        errors: [
+          error instanceof AppError
+            ? error
+            : new AppError({ status: 500, message: "Smoke test failure" }),
+        ],
+      };
+    }
+  },
+);
+mock.method(
+  getAccountDeletionTombstoneService(),
+  "assertMutationAllowed",
+  async (): Promise<void> => undefined,
+);
+mock.method(
+  AvatarUploadRepository.prototype,
+  "consumeIssueLimit",
+  async () => ({ success: true, data: { consumed: true } }),
+);
 mock.method(
   getUserService().getById,
   "direct",

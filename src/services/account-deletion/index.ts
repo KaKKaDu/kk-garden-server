@@ -1,13 +1,15 @@
 import { getMongoService } from "@/services/mongo/index.ts";
-import { AccountDeletionTombstoneRepository } from "@/services/account-deletion/account-deletion-tombstone.repository.ts";
-import { AccountDeletionTombstoneService } from "@/services/account-deletion/account-deletion-tombstone.service.ts";
+import { AccountDeletionService } from "@/services/account-deletion/account-deletion.service.ts";
+import { getAccountDeletionTombstoneService } from "@/services/account-deletion/tombstone/index.ts";
+import { getAvatarCleanupService } from "@/services/avatar/avatar-cleanup/index.ts";
 
-const repositorySingleton = new AccountDeletionTombstoneRepository(
+const deletionServiceSingleton = new AccountDeletionService(
   getMongoService(),
-);
-const serviceSingleton = new AccountDeletionTombstoneService(
-  repositorySingleton,
+  getAccountDeletionTombstoneService(),
+  getAvatarCleanupService(),
 );
 
-export const getAccountDeletionTombstoneService =
-  (): AccountDeletionTombstoneService => serviceSingleton;
+export const getAccountDeletionService = (): AccountDeletionService =>
+  deletionServiceSingleton;
+
+export { getAccountDeletionTombstoneService };

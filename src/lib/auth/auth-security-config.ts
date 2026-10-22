@@ -24,7 +24,7 @@ export const getAuthSecurityOptions = (
       "/passkey/verify-registration": { window: 60, max: 5 },
     },
   },
-  session: { freshAge: 300 },
+  session: { expiresIn: 24 * 60 * 60, freshAge: 300 },
   advanced: {
     useSecureCookies: isProduction,
     defaultCookieAttributes: {

@@ -13,6 +13,7 @@ import type {
   AvatarCleanupData,
 } from "@/services/avatar/avatar-cleanup/types.ts";
 import type { AvatarUploadClaim } from "@/services/avatar/avatar-upload/types.ts";
+import type { AccountDeletionTombstoneService } from "@/services/account-deletion/account-deletion-tombstone.service.ts";
 import { Variables } from "@lib/variables/variables.ts";
 
 const cleanupVariables = Variables.of({
@@ -25,6 +26,7 @@ export class AvatarCleanupService {
     private readonly repository: AvatarCleanupRepository,
     private readonly storageService: AvatarStorageService,
     private readonly uploads: AvatarUploadRepository,
+    private readonly tombstones: AccountDeletionTombstoneService,
   ) {}
 
   start(): Promise<SuccessDataAny<{ started: true }>> {
@@ -133,6 +135,22 @@ export class AvatarCleanupService {
     );
     if (!deleted.success) {
       throw new Error("storage-unavailable");
+    }
+    if (data.target.kind !== "displaced-avatar") {
+      const accountIsDeleted: boolean = await this.tombstones.isDeleted(
+        data.ownerId,
+      );
+      if (accountIsDeleted) {
+        const uploadRemoval =
+          await this.repository.removeAccountUploadIfComplete(
+            data.target.uploadId,
+            data.ownerId,
+            String(job.attrs._id),
+          );
+        if (!uploadRemoval.success) {
+          throw new Error("avatar-upload-cleanup-state-unavailable");
+        }
+      }
     }
   }
 }

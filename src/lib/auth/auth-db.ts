@@ -2,6 +2,7 @@ import type { Mongoose } from "mongoose";
 import type { Db, MongoClient } from "mongodb";
 import type { SuccessDataAny } from "@kk-garden/shared/errors";
 import { getMongoService } from "@/services/mongo/index.ts";
+import { getConfiguredMongoDatabase } from "@/services/mongo/mongo.repository.ts";
 
 export interface AuthDbBridge {
   db: Db;
@@ -13,7 +14,7 @@ export const getAuthDb = async (): Promise<SuccessDataAny<AuthDbBridge>> => {
   return getMongoService().execute<AuthDbBridge>(
     async (connection: Mongoose): Promise<AuthDbBridge> => {
       const client: MongoClient = connection.connection.getClient();
-      const db: Db = client.db();
+      const db: Db = getConfiguredMongoDatabase(connection);
       return { db, client };
     },
     "auth-db.getAuthDb",

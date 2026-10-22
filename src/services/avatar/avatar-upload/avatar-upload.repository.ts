@@ -11,6 +11,7 @@ import type {
   ProfileAvatarUploadSession,
 } from "@kk-garden/shared/types";
 import type { MongoService } from "@/services/mongo/mongo.service.ts";
+import { getConfiguredMongoDatabase } from "@/services/mongo/mongo.repository.ts";
 import type {
   AvatarUploadClaim,
   AvatarUploadClaimLookup,
@@ -36,7 +37,7 @@ export class AvatarUploadRepository {
 
   initialize(): Promise<SuccessDataAny<{ ready: true }>> {
     return this.mongoService.execute(async (connection: Mongoose) => {
-      const db = connection.connection.getClient().db();
+      const db = getConfiguredMongoDatabase(connection);
       await db
         .collection<ProfileAvatarUploadSession>(
           uploadVariables.get("collection-name"),
@@ -103,12 +104,11 @@ export class AvatarUploadRepository {
           });
         }
 
-        const uploads = connection.connection
-          .getClient()
-          .db()
-          .collection<ProfileAvatarUploadSession>(
-            uploadVariables.get("collection-name"),
-          );
+        const uploads = getConfiguredMongoDatabase(
+          connection,
+        ).collection<ProfileAvatarUploadSession>(
+          uploadVariables.get("collection-name"),
+        );
         const now: Date = new Date();
         await uploads.updateMany(
           {
@@ -185,9 +185,7 @@ export class AvatarUploadRepository {
       this.mongoService.execute(
         async (connection: Mongoose): Promise<AvatarUploadLookup> => {
           const upload: Nullable<ProfileAvatarUploadSession> =
-            await connection.connection
-              .getClient()
-              .db()
+            await getConfiguredMongoDatabase(connection)
               .collection<ProfileAvatarUploadSession>(
                 uploadVariables.get("collection-name"),
               )
@@ -239,12 +237,11 @@ export class AvatarUploadRepository {
   ): Promise<SuccessDataAny<AvatarUploadClaimLookup>> {
     return this.mongoService.execute(
       async (connection: Mongoose): Promise<AvatarUploadClaimLookup> => {
-        const uploads = connection.connection
-          .getClient()
-          .db()
-          .collection<ProfileAvatarUploadSession>(
-            uploadVariables.get("collection-name"),
-          );
+        const uploads = getConfiguredMongoDatabase(
+          connection,
+        ).collection<ProfileAvatarUploadSession>(
+          uploadVariables.get("collection-name"),
+        );
         const updated = await uploads.updateOne(filter, {
           $set: {
             state: "processing",
@@ -311,12 +308,11 @@ export class AvatarUploadRepository {
           filter["claim.leaseExpiresAt"] = { $gt: now };
         }
 
-        const uploads = connection.connection
-          .getClient()
-          .db()
-          .collection<ProfileAvatarUploadSession>(
-            uploadVariables.get("collection-name"),
-          );
+        const uploads = getConfiguredMongoDatabase(
+          connection,
+        ).collection<ProfileAvatarUploadSession>(
+          uploadVariables.get("collection-name"),
+        );
         const updated =
           change.state === "pending"
             ? await uploads.updateOne(filter, {
@@ -419,9 +415,7 @@ export class AvatarUploadRepository {
       this.mongoService.execute(
         async (connection: Mongoose): Promise<AvatarUploadTransition> => {
           const result = ProfileAvatarUploadResultSchema.parse(input.result);
-          const updated = await connection.connection
-            .getClient()
-            .db()
+          const updated = await getConfiguredMongoDatabase(connection)
             .collection<ProfileAvatarUploadSession>(
               uploadVariables.get("collection-name"),
             )

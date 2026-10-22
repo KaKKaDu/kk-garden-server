@@ -13,6 +13,11 @@ export const ProfileMongoSchema = new Schema<Profile>(
       match: /^#[\da-f]{6}$/,
     },
     avatarObjectKey: { type: String, required: false, minlength: 1 },
+    lookupCode: {
+      type: String,
+      required: false,
+      match: /^[A-HJKMNP-Z2-9]{16}$/,
+    },
   },
   {
     strict: "throw",

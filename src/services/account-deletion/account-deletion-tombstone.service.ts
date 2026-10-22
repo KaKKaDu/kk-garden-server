@@ -6,20 +6,7 @@ import {
   type AccountDeletionTombstone,
 } from "@/schemas/models/account-deletion-tombstone.mongo.schema.ts";
 import type { AccountDeletionTombstoneRepository } from "@/services/account-deletion/account-deletion-tombstone.repository.ts";
-
-const requireData = <T extends object>(
-  result: SuccessDataAny<T>,
-  fallback: string,
-): T => {
-  if (!result.success || !result.data) {
-    const error = result.success ? undefined : result.errors[0];
-    throw new AppError({
-      status: error?.status ?? 503,
-      message: error?.message ?? fallback,
-    });
-  }
-  return result.data;
-};
+import { requireData } from "@/utils/require-data.ts";
 
 export class AccountDeletionTombstoneService {
   constructor(
@@ -31,16 +18,29 @@ export class AccountDeletionTombstoneService {
   }
 
   async assertNotDeleted(userId: string): Promise<void> {
-    const lookup = requireData(
-      await this.repository.isDeleted.direct(userId),
-      "Deleted-account status could not be checked",
-    );
-    if (lookup.deleted) {
+    if (await this.isDeleted(userId)) {
       throw new AppError({
         status: 403,
         message: "Deleted accounts cannot access application routes",
       });
     }
+  }
+
+  async assertNotDeletedAsNotFound(
+    userId: string,
+    message: string,
+  ): Promise<void> {
+    if (await this.isDeleted(userId)) {
+      throw new AppError({ status: 404, message });
+    }
+  }
+
+  async isDeleted(userId: string): Promise<boolean> {
+    const lookup = requireData(
+      await this.repository.isDeleted.direct(userId),
+      "Deleted-account status could not be checked",
+    );
+    return lookup.deleted;
   }
 
   async assertMutationAllowed(
