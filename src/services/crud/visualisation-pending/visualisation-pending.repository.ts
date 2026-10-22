@@ -1,4 +1,4 @@
-import type { SuccessDataAny } from "@kk-garden/shared/errors";
+import { AppError, type SuccessDataAny } from "@kk-garden/shared/errors";
 import type {
   Nullable,
   VisualisationPendingDto,
@@ -51,22 +51,24 @@ export class VisualisationPendingRepository {
 
   getById = transactional(
     async (
+      ownerId: string,
       id: string,
       session: Nullable<ClientSession>,
     ): Promise<SuccessDataAny<VisualisationPendingDto>> => {
       return this.mongoService.execute<VisualisationPendingDto>(
         async (db: Mongoose): Promise<VisualisationPendingDto> => {
           const model: Model<VisualisationPendingDto> = this.getModel(db);
-          const query = model.findById(id);
+          const query = model.findOne({ _id: id, ownerId });
           if (session) {
             query.session(session);
           }
           const document: DocumentLike | null = await query.exec();
 
           if (!document) {
-            throw new Error(
-              `VisualisationPendingDto with id ${id} was not found`,
-            );
+            throw new AppError({
+              status: 404,
+              message: "Pending visualisation not found",
+            });
           }
 
           return this.toDto(document);
@@ -78,13 +80,14 @@ export class VisualisationPendingRepository {
 
   getByPendingId = transactional(
     async (
+      ownerId: string,
       pendingId: string,
       session: Nullable<ClientSession>,
     ): Promise<SuccessDataAny<VisualisationPendingDto[]>> => {
       return this.mongoService.execute<VisualisationPendingDto[]>(
         async (db: Mongoose): Promise<VisualisationPendingDto[]> => {
           const model: Model<VisualisationPendingDto> = this.getModel(db);
-          const query = model.find({ pendingId });
+          const query = model.find({ ownerId, pendingId });
           if (session) {
             query.session(session);
           }
@@ -101,6 +104,7 @@ export class VisualisationPendingRepository {
 
   getByPendingIdAndVisualisationId = transactional(
     async (
+      ownerId: string,
       pendingId: string,
       visualisationId: string,
       session: Nullable<ClientSession>,
@@ -109,6 +113,7 @@ export class VisualisationPendingRepository {
         async (db: Mongoose): Promise<VisualisationPendingDto> => {
           const model: Model<VisualisationPendingDto> = this.getModel(db);
           const query = model.findOne({
+            ownerId,
             pendingId,
             _id: visualisationId,
           });
@@ -118,14 +123,40 @@ export class VisualisationPendingRepository {
           const document: DocumentLike | null = await query.exec();
 
           if (!document) {
-            throw new Error(
-              `VisualisationPendingDto with pendingId ${pendingId} and visualisationId ${visualisationId} was not found`,
-            );
+            throw new AppError({
+              status: 404,
+              message: "Pending visualisation not found",
+            });
           }
 
           return this.toDto(document);
         },
         "VisualisationPendingRepository.getByPendingIdAndVisualisationId",
+      );
+    },
+  );
+
+  existsByPendingIdAndVisualisationId = transactional(
+    async (
+      ownerId: string,
+      pendingId: string,
+      visualisationId: string,
+      session: Nullable<ClientSession>,
+    ): Promise<SuccessDataAny<{ exists: boolean }>> => {
+      return this.mongoService.execute<{ exists: boolean }>(
+        async (db: Mongoose): Promise<{ exists: boolean }> => {
+          const model: Model<VisualisationPendingDto> = this.getModel(db);
+          const query = model
+            .findOne({ ownerId, pendingId, _id: visualisationId })
+            .select({ _id: 1 });
+          if (session) {
+            query.session(session);
+          }
+          const document: DocumentLike | null = await query.exec();
+
+          return { exists: document !== null };
+        },
+        "VisualisationPendingRepository.existsByPendingIdAndVisualisationId",
       );
     },
   );
@@ -154,22 +185,24 @@ export class VisualisationPendingRepository {
 
   delete = transactional(
     async (
+      ownerId: string,
       id: string,
       session: Nullable<ClientSession>,
     ): Promise<SuccessDataAny<VisualisationPendingDto>> => {
       return this.mongoService.execute<VisualisationPendingDto>(
         async (db: Mongoose): Promise<VisualisationPendingDto> => {
           const model: Model<VisualisationPendingDto> = this.getModel(db);
-          const query = model.findByIdAndDelete(id);
+          const query = model.findOneAndDelete({ _id: id, ownerId });
           if (session) {
             query.session(session);
           }
           const document: DocumentLike | null = await query.exec();
 
           if (!document) {
-            throw new Error(
-              `VisualisationPendingDto with id ${id} was not found`,
-            );
+            throw new AppError({
+              status: 404,
+              message: "Pending visualisation not found",
+            });
           }
 
           return this.toDto(document);
@@ -181,13 +214,15 @@ export class VisualisationPendingRepository {
 
   deleteByPendingId = transactional(
     async (
+      ownerId: string,
       pendingId: string,
       session: Nullable<ClientSession>,
     ): Promise<SuccessDataAny<VisualisationPendingDto[]>> => {
       return this.mongoService.execute<VisualisationPendingDto[]>(
         async (db: Mongoose): Promise<VisualisationPendingDto[]> => {
           const model: Model<VisualisationPendingDto> = this.getModel(db);
-          const findQuery = model.find({ pendingId });
+          const filter = { ownerId, pendingId };
+          const findQuery = model.find(filter);
           if (session) {
             findQuery.session(session);
           }
@@ -201,7 +236,7 @@ export class VisualisationPendingRepository {
             return mapped;
           }
 
-          const deleteQuery = model.deleteMany({ pendingId });
+          const deleteQuery = model.deleteMany(filter);
           if (session) {
             deleteQuery.session(session);
           }
@@ -210,6 +245,41 @@ export class VisualisationPendingRepository {
           return mapped;
         },
         "VisualisationPendingRepository.deleteByPendingId",
+      );
+    },
+  );
+
+  deleteByOwnerId = transactional(
+    async (
+      ownerId: string,
+      session: Nullable<ClientSession>,
+    ): Promise<SuccessDataAny<VisualisationPendingDto[]>> => {
+      return this.mongoService.execute<VisualisationPendingDto[]>(
+        async (db: Mongoose): Promise<VisualisationPendingDto[]> => {
+          const model: Model<VisualisationPendingDto> = this.getModel(db);
+          const findQuery = model.find({ ownerId });
+          if (session) {
+            findQuery.session(session);
+          }
+          const documents: DocumentLike[] = await findQuery.exec();
+          const mapped: VisualisationPendingDto[] = documents.map(
+            (document: DocumentLike): VisualisationPendingDto =>
+              this.toDto(document),
+          );
+
+          if (mapped.length === 0) {
+            return mapped;
+          }
+
+          const deleteQuery = model.deleteMany({ ownerId });
+          if (session) {
+            deleteQuery.session(session);
+          }
+          await deleteQuery.exec();
+
+          return mapped;
+        },
+        "VisualisationPendingRepository.deleteByOwnerId",
       );
     },
   );

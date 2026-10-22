@@ -3,7 +3,7 @@ import type { UserService } from "@/services/crud/user/user.service.ts";
 import type { SignatureService } from "@/services/crud/signature/signature.service.ts";
 import type { VisualisationService } from "@/services/crud/visualisation/visualisation.service.ts";
 import type { VisualisationPendingService } from "@/services/crud/visualisation-pending/visualisation-pending.service.ts";
-import { type SuccessDataAny } from "@kk-garden/shared/errors";
+import { AppError, type SuccessDataAny } from "@kk-garden/shared/errors";
 import type { MongoService } from "@/services/mongo/mongo.service.ts";
 import type {
   Ownership,
@@ -24,7 +24,7 @@ export class OwnershipCreationService {
   ) {}
 
   async createOwnershipTransaction(
-    userId: string,
+    ownerId: string,
     visualisationId: string,
     pendingId?: string,
   ): Promise<SuccessDataAny<Ownership>> {
@@ -37,7 +37,7 @@ export class OwnershipCreationService {
             await session.withTransaction(
               async (): Promise<SuccessDataAny<Ownership>> => {
                 const verifyUser: SuccessDataAny<User> =
-                  await this.userService.getById(userId, session);
+                  await this.userService.getById(ownerId, session);
 
                 if (!verifyUser.success) {
                   throw new Error("User for the transaction not found");
@@ -46,6 +46,7 @@ export class OwnershipCreationService {
                 const verifyVisualisation: SuccessDataAny<VisualisationDto> =
                   pendingId
                     ? await this.visualisationPendingService.persistByPendingIdAndVisualisationId(
+                        ownerId,
                         pendingId,
                         visualisationId,
                         session,
@@ -56,10 +57,15 @@ export class OwnershipCreationService {
                         session,
                       );
 
-                if (!verifyVisualisation.success || !verifyVisualisation.data) {
-                  throw new Error(
-                    "Visualisation for the transaction not found",
-                  );
+                if (!verifyVisualisation.success) {
+                  throw verifyVisualisation.errors[0];
+                }
+                if (!verifyVisualisation.data) {
+                  throw new AppError({
+                    status: 500,
+                    message:
+                      "Visualisation for the transaction returned no data",
+                  });
                 }
 
                 const visualisation: VisualisationDto =
@@ -91,13 +97,19 @@ export class OwnershipCreationService {
                 const signatureId: string = createSignature.data._id;
 
                 const createOwnership = await this.ownershipService.assign(
-                  userId,
+                  ownerId,
                   signatureId,
                   session,
                 );
 
-                if (!createOwnership.success || !createOwnership.data) {
-                  throw new Error("Ownership creation failed");
+                if (!createOwnership.success) {
+                  throw createOwnership.errors[0];
+                }
+                if (!createOwnership.data) {
+                  throw new AppError({
+                    status: 500,
+                    message: "Ownership creation returned no data",
+                  });
                 }
 
                 return createOwnership;

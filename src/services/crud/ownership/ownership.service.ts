@@ -1,4 +1,8 @@
-import { handleError, type SuccessDataAny } from "@kk-garden/shared/errors";
+import {
+  AppError,
+  handleError,
+  type SuccessDataAny,
+} from "@kk-garden/shared/errors";
 import type { Nullable, Ownership } from "@kk-garden/shared/types";
 import type { ClientSession } from "mongoose";
 import crypto from "node:crypto";
@@ -72,15 +76,19 @@ export class OwnershipService {
         const sameUserOwnershipResult: SuccessDataAny<Ownership> =
           await this.getByUserId(userId, session);
         if (sameUserOwnershipResult.success) {
-          throw new Error(`Ownership for userId ${userId} already exists`);
+          throw new AppError({
+            status: 409,
+            message: "This account already has an assigned garden",
+          });
         }
 
         const sameSignatureOwnershipResult: SuccessDataAny<Ownership> =
           await this.getBySignatureId(signatureId, session);
         if (sameSignatureOwnershipResult.success) {
-          throw new Error(
-            `Ownership for signatureId ${signatureId} already exists`,
-          );
+          throw new AppError({
+            status: 409,
+            message: "This garden already has an owner",
+          });
         }
 
         const userResult = await this.userService.getById(userId, session);

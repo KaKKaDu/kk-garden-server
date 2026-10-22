@@ -18,6 +18,7 @@
     "test:avatar-upload": "tsx scripts/avatar-upload-smoke.ts",
     "test:avatar-finalize": "tsx scripts/avatar-finalize-smoke.ts",
     "test:avatar-owner": "tsx scripts/avatar-owner-smoke.ts",
+    "test:pending-owner": "tsx scripts/pending-owner-smoke.ts",
     "signature-key-pair": "tsx scripts/signature-key-pair.ts",
     "shared": "npm install @kk-garden/shared@latest"
   },
@@ -35,7 +36,7 @@
     "@better-auth/passkey": "^1.7.5",
     "@fastify/compress": "^8.0.0",
     "@fastify/cors": "^11.2.0",
-    "@kk-garden/shared": "^1.4.9",
+    "@kk-garden/shared": "^1.5.0",
     "agenda": "6.2.6",
     "better-auth": "^1.7.5",
     "dotenv": "^17.4.2",

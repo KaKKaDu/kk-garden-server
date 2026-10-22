@@ -19,6 +19,7 @@ import { gardenDrawDataTransformer } from "@kk-garden/shared/transformers";
 import { randomUUID } from "node:crypto";
 import { getPendingVisualisationCreationService } from "@/services/transactions/pending-visualisation-creation/index.ts";
 import type { SuccessDataAny } from "@kk-garden/shared/errors";
+import { AppError } from "@kk-garden/shared/errors";
 
 export const generateRootRoute: RouteFactory = (
   fastify: FastifyInstance,
@@ -37,6 +38,13 @@ export const generateRootRoute: RouteFactory = (
     },
     async (request, reply) => {
       try {
+        const ownerId: string | undefined = request.user?.id;
+        if (!ownerId) {
+          throw new AppError({
+            status: 401,
+            message: "Authentication required",
+          });
+        }
         const { count = 3, pendingId } = request.query;
         const resolvedPendingId: string = pendingId
           ? String(pendingId)
@@ -58,6 +66,7 @@ export const generateRootRoute: RouteFactory = (
           VisualisationPendingDto[]
         > =
           await getPendingVisualisationCreationService().createPendingVisualisationsTransaction(
+            ownerId,
             resolvedPendingId,
             transformedGenerations,
           );

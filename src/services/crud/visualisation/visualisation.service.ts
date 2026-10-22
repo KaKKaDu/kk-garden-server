@@ -44,6 +44,15 @@ export class VisualisationService {
     },
   );
 
+  existsById = transactional(
+    async (
+      id: string,
+      session: Nullable<ClientSession>,
+    ): Promise<SuccessDataAny<{ exists: boolean }>> => {
+      return this.repository.existsById(id, session);
+    },
+  );
+
   create = transactional(
     async (
       payload: CreateVisualisationPayload,

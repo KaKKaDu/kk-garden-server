@@ -8,6 +8,7 @@ export const VisualisationPendingDtoMongoSchema =
     {
       _id: { type: String, required: true },
       pendingId: { type: String, required: true },
+      ownerId: { type: String, required: true },
       data: { type: GardenDrawDataDtoMongoSchema, required: true },
       createdAt: { type: Date, required: true },
     },
@@ -16,6 +17,8 @@ export const VisualisationPendingDtoMongoSchema =
       minimize: false,
     },
   );
+
+VisualisationPendingDtoMongoSchema.index({ ownerId: 1, pendingId: 1 });
 
 export const parseVisualisationPendingDto = (
   payload: unknown,

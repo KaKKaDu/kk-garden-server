@@ -73,6 +73,27 @@ export class VisualisationRepository {
     },
   );
 
+  existsById = transactional(
+    async (
+      id: string,
+      session: Nullable<ClientSession>,
+    ): Promise<SuccessDataAny<{ exists: boolean }>> => {
+      return this.mongoService.execute<{ exists: boolean }>(
+        async (db: Mongoose): Promise<{ exists: boolean }> => {
+          const model: Model<VisualisationDto> = this.getModel(db);
+          const query = model.findById(id).select({ _id: 1 });
+          if (session) {
+            query.session(session);
+          }
+          const document: DocumentLike | null = await query.exec();
+
+          return { exists: document !== null };
+        },
+        "VisualisationRepository.existsById",
+      );
+    },
+  );
+
   create = transactional(
     async (
       payload: CreateVisualisationPayload,

@@ -11,6 +11,7 @@ import { HandleRouteError } from "@lib/route-error/route-error.ts";
 import type { ErrorResponse, Ownership } from "@kk-garden/shared/types";
 import { getOwnershipCreationService } from "@/services/transactions/ownership-creation/index.ts";
 import type { SuccessDataAny } from "@kk-garden/shared/errors";
+import { AppError } from "@kk-garden/shared/errors";
 
 export const assignRootRoute: RouteFactory = (
   fastify: FastifyInstance,
@@ -29,11 +30,18 @@ export const assignRootRoute: RouteFactory = (
     },
     async (request, reply) => {
       try {
-        const { userId, visualisationId, pendingId } = request.body;
+        const ownerId: string | undefined = request.user?.id;
+        if (!ownerId) {
+          throw new AppError({
+            status: 401,
+            message: "Authentication required",
+          });
+        }
+        const { visualisationId, pendingId } = request.body;
 
         const createOwnershipResult: SuccessDataAny<Ownership> =
           await getOwnershipCreationService().createOwnershipTransaction(
-            userId,
+            ownerId,
             visualisationId,
             pendingId,
           );

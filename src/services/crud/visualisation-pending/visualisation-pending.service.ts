@@ -1,4 +1,8 @@
-import { handleError, type SuccessDataAny } from "@kk-garden/shared/errors";
+import {
+  AppError,
+  handleError,
+  type SuccessDataAny,
+} from "@kk-garden/shared/errors";
 import type {
   GardenDrawDataDto,
   Nullable,
@@ -20,19 +24,21 @@ export class VisualisationPendingService {
 
   getById = transactional(
     async (
+      ownerId: string,
       id: string,
       session: Nullable<ClientSession>,
     ): Promise<SuccessDataAny<VisualisationPendingDto>> => {
-      return this.repository.getById(id, session);
+      return this.repository.getById(ownerId, id, session);
     },
   );
 
   getByPendingId = transactional(
     async (
+      ownerId: string,
       pendingId: string,
       session: Nullable<ClientSession>,
     ): Promise<SuccessDataAny<VisualisationPendingDto[]>> => {
-      return this.repository.getByPendingId(pendingId, session);
+      return this.repository.getByPendingId(ownerId, pendingId, session);
     },
   );
 
@@ -47,6 +53,7 @@ export class VisualisationPendingService {
 
   createFromData = transactional(
     async (
+      ownerId: string,
       pendingId: string,
       data: GardenDrawDataDto,
       session: Nullable<ClientSession>,
@@ -59,13 +66,19 @@ export class VisualisationPendingService {
         }
         const hashId: string = hashIdResult.data;
 
-        const sameVisualisationPendingExists: SuccessDataAny<VisualisationPendingDto> =
-          await this.repository.getByPendingIdAndVisualisationId(
+        const existingPendingResult: SuccessDataAny<{ exists: boolean }> =
+          await this.repository.existsByPendingIdAndVisualisationId(
+            ownerId,
             pendingId,
             hashId,
             session,
           );
-        if (sameVisualisationPendingExists.success) {
+        if (!existingPendingResult.success || !existingPendingResult.data) {
+          throw new Error(
+            "Failed to check for an existing pending visualisation",
+          );
+        }
+        if (existingPendingResult.data.exists) {
           throw new Error(
             `VisualisationPending with pendingId ${pendingId} and visualisationId ${hashId} already exists`,
           );
@@ -74,6 +87,7 @@ export class VisualisationPendingService {
         const payload: CreateVisualisationPendingPayload = {
           _id: hashId,
           pendingId,
+          ownerId,
           data,
           createdAt: new Date(),
         };
@@ -87,24 +101,36 @@ export class VisualisationPendingService {
 
   delete = transactional(
     async (
+      ownerId: string,
       id: string,
       session: Nullable<ClientSession>,
     ): Promise<SuccessDataAny<VisualisationPendingDto>> => {
-      return this.repository.delete(id, session);
+      return this.repository.delete(ownerId, id, session);
     },
   );
 
   deleteByPendingId = transactional(
     async (
+      ownerId: string,
       pendingId: string,
       session: Nullable<ClientSession>,
     ): Promise<SuccessDataAny<VisualisationPendingDto[]>> => {
-      return this.repository.deleteByPendingId(pendingId, session);
+      return this.repository.deleteByPendingId(ownerId, pendingId, session);
+    },
+  );
+
+  deleteByOwnerId = transactional(
+    async (
+      ownerId: string,
+      session: Nullable<ClientSession>,
+    ): Promise<SuccessDataAny<VisualisationPendingDto[]>> => {
+      return this.repository.deleteByOwnerId(ownerId, session);
     },
   );
 
   persistByPendingIdAndVisualisationId = transactional(
     async (
+      ownerId: string,
       pendingId: string,
       visualisationId: string,
       session: Nullable<ClientSession>,
@@ -112,6 +138,7 @@ export class VisualisationPendingService {
       try {
         const pendingVisualisationResult: SuccessDataAny<VisualisationPendingDto> =
           await this.repository.getByPendingIdAndVisualisationId(
+            ownerId,
             pendingId,
             visualisationId,
             session,
@@ -121,13 +148,32 @@ export class VisualisationPendingService {
           !pendingVisualisationResult.success ||
           !pendingVisualisationResult.data
         ) {
-          throw new Error(
-            `VisualisationPending with pendingId ${pendingId} and visualisationId ${visualisationId} was not found`,
-          );
+          if (!pendingVisualisationResult.success) {
+            throw pendingVisualisationResult.errors[0];
+          }
+          throw new AppError({
+            status: 404,
+            message: "Pending visualisation not found",
+          });
         }
 
         const pendingVisualisation: VisualisationPendingDto =
           pendingVisualisationResult.data;
+
+        const finalizedExistsResult: SuccessDataAny<{ exists: boolean }> =
+          await this.visualisationService.existsById(
+            pendingVisualisation._id,
+            session,
+          );
+        if (!finalizedExistsResult.success || !finalizedExistsResult.data) {
+          throw new Error("Failed to check for an existing visualisation");
+        }
+        if (finalizedExistsResult.data.exists) {
+          throw new AppError({
+            status: 409,
+            message: "Visualisation already exists",
+          });
+        }
 
         const createPayload: CreateVisualisationPayload = {
           _id: pendingVisualisation._id,
@@ -148,7 +194,7 @@ export class VisualisationPendingService {
         }
 
         const deletePendingResult: SuccessDataAny<VisualisationPendingDto[]> =
-          await this.repository.deleteByPendingId(pendingId, session);
+          await this.repository.deleteByPendingId(ownerId, pendingId, session);
         if (!deletePendingResult.success) {
           throw new Error(
             `Failed to delete pending visualisations with pendingId ${pendingId}`,

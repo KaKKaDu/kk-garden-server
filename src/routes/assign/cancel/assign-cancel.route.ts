@@ -10,6 +10,8 @@ import { HandleRouteError } from "@lib/route-error/route-error.ts";
 import type { ErrorResponse } from "@kk-garden/shared/types";
 import { getVisualisationPendingService } from "@/services/crud/visualisation-pending/index.ts";
 import type { SuccessDataAny } from "@kk-garden/shared/errors";
+import { AppError } from "@kk-garden/shared/errors";
+import type { Nullable } from "@kk-garden/shared/types";
 
 export const assignCancelRoute: RouteFactory = (
   fastify: FastifyInstance,
@@ -28,10 +30,18 @@ export const assignCancelRoute: RouteFactory = (
     },
     async (request, reply) => {
       try {
+        const ownerId: Nullable<string> = request.user?.id;
+        if (!ownerId) {
+          throw new AppError({
+            status: 401,
+            message: "Authentication required",
+          });
+        }
         const { pendingId }: { pendingId: string } = request.body;
 
         const deleteResult: SuccessDataAny =
           await getVisualisationPendingService().deleteByPendingId.direct(
+            ownerId,
             pendingId,
           );
 

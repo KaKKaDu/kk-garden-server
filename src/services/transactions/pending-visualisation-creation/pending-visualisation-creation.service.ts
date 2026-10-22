@@ -14,6 +14,7 @@ export class PendingVisualisationCreationService {
   ) {}
 
   async createPendingVisualisationsTransaction(
+    ownerId: string,
     pendingId: string,
     generations: GardenDrawDataDto[],
   ): Promise<SuccessDataAny<VisualisationPendingDto[]>> {
@@ -30,6 +31,7 @@ export class PendingVisualisationCreationService {
                 for (const generation of generations) {
                   const createResult: SuccessDataAny<VisualisationPendingDto> =
                     await this.visualisationPendingService.createFromData(
+                      ownerId,
                       pendingId,
                       generation,
                       session,
