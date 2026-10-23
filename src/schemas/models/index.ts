@@ -35,6 +35,14 @@ export {
 } from "./ownership.mongo.schema.ts";
 export { ProfileMongoSchema, parseProfile } from "./profile.mongo.schema.ts";
 export {
+  GardenShareRequestMongoSchema,
+  parseGardenShareRequest,
+} from "./garden-share-request.mongo.schema.ts";
+export {
+  GardenShareGrantMongoSchema,
+  parseGardenShareGrant,
+} from "./garden-share-grant.mongo.schema.ts";
+export {
   ACCOUNT_DELETION_TOMBSTONE_COLLECTION,
   AccountDeletionTombstoneSchema,
   type AccountDeletionTombstone,

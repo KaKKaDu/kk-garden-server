@@ -15,6 +15,7 @@ import type { UserService } from "@/services/crud/user/user.service.ts";
 import type { AvatarStorageService } from "@/services/avatar/avatar-storage/avatar-storage.service.ts";
 import type { MongoService } from "@/services/mongo/mongo.service.ts";
 import type { AccountDeletionTombstoneService } from "@/services/account-deletion/account-deletion-tombstone.service.ts";
+import { captureSuccessData } from "@/utils/capture-success-data.ts";
 import { requireData } from "@/utils/require-data.ts";
 import { Logger } from "@lib/logs/logger.ts";
 
@@ -166,5 +167,96 @@ export class ProfileLookupService {
       Logger.report("ProfileLookupService.resolveCard", result);
       return result;
     }
+  }
+
+  async resolveUserIdByLookupCode(
+    requesterId: string,
+    lookupCode: string,
+  ): Promise<SuccessDataAny<{ userId: string }>> {
+    try {
+      requireData(
+        await this.lookupRepository.consumeLimit(requesterId),
+        "Profile lookup rate limit could not be checked",
+      );
+      const profile: Nullable<Profile> = requireData(
+        await this.lookupRepository.findByLookupCode(lookupCode),
+        "Profile lookup failed",
+      ).profile;
+      if (!profile?.lookupCode) {
+        throw new AppError({ status: 404, message: "Profile not found" });
+      }
+
+      await this.tombstones.assertNotDeletedAsNotFound(
+        profile._id,
+        "Profile not found",
+      );
+      const targetResult: SuccessDataAny<User> =
+        await this.userService.getById.direct(profile._id);
+      if (!targetResult.success || !targetResult.data) {
+        const targetError = targetResult.success
+          ? undefined
+          : targetResult.errors[0];
+        if (targetError?.status === 404) {
+          throw new AppError({ status: 404, message: "Profile not found" });
+        }
+        throw new AppError({
+          status: targetError?.status ?? 503,
+          message: "Profile owner status could not be checked",
+        });
+      }
+      if (targetResult.data.status !== "active") {
+        throw new AppError({ status: 404, message: "Profile not found" });
+      }
+
+      const result: SuccessDataAny<{ userId: string }> = {
+        success: true,
+        data: { userId: profile._id },
+      };
+      Logger.report("ProfileLookupService.resolveUserIdByLookupCode", result);
+      return result;
+    } catch (error: unknown) {
+      const result: SuccessDataAny<{ userId: string }> = handleError<{
+        userId: string;
+      }>(error);
+      Logger.report("ProfileLookupService.resolveUserIdByLookupCode", result);
+      return result;
+    }
+  }
+
+  getCardForUserId(
+    userId: string,
+  ): Promise<SuccessDataAny<ProfileLookupCardResponse>> {
+    return captureSuccessData(
+      "ProfileLookupService.getCardForUserId",
+      async (): Promise<ProfileLookupCardResponse> => {
+        await this.tombstones.assertNotDeletedAsNotFound(
+          userId,
+          "Profile not found",
+        );
+        const user: User = requireData(
+          await this.userService.getById.direct(userId),
+          "Profile status could not be checked",
+        );
+        if (user.status !== "active") {
+          throw new AppError({ status: 404, message: "Profile not found" });
+        }
+
+        const profile: Nullable<Profile> = requireData(
+          await this.lookupRepository.getProfileById(userId, null),
+          "Profile lookup failed",
+        ).profile;
+        const avatar: ProfileLookupCardResponse["avatar"] =
+          profile?.avatarObjectKey
+            ? requireData(
+                await this.avatarStorage.signRead(profile.avatarObjectKey),
+                "Avatar delivery could not be signed",
+              )
+            : null;
+        return {
+          displayName: profile?.displayName ?? "Garden visitor",
+          avatar,
+        };
+      },
+    );
   }
 }
