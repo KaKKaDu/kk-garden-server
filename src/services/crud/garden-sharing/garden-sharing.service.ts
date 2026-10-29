@@ -18,7 +18,7 @@ import type {
   User,
   VisualisationDto,
 } from "@kk-garden/shared/types";
-import type { AccountDeletionTombstoneService } from "@/services/account-deletion/account-deletion-tombstone.service.ts";
+import type { AccountDeletionTombstoneService } from "@/services/account-deletion/tombstone/account-deletion-tombstone.service.ts";
 import type { GardenSharingRepository } from "@/services/crud/garden-sharing/garden-sharing.repository.ts";
 import type { ProfileLookupService } from "@/services/crud/profile-lookup/profile-lookup.service.ts";
 import type { ProfileService } from "@/services/crud/profile/profile.service.ts";

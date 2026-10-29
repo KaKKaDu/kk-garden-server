@@ -16,6 +16,7 @@ import { accountRoutes } from "@/routes/account/account.routes.ts";
 import { addMutationOriginGuard } from "@lib/routes/mutation-origin-guard.ts";
 import { sharingRoutes } from "@/routes/sharing/sharing.routes.ts";
 import { gardenRoutes } from "@/routes/garden/garden.routes.ts";
+import { getVisualisationPendingService } from "@/services/crud/visualisation-pending/index.ts";
 
 const avatarCleanupService = getAvatarCleanupService();
 
@@ -23,6 +24,12 @@ void init(async (app: FastifyInstance) => {
   const tombstoneInit = await getAccountDeletionTombstoneService().initialize();
   if (!tombstoneInit.success) {
     throw new Error("Account deletion tombstones could not be initialized");
+  }
+
+  const pendingVisualisationInit =
+    await getVisualisationPendingService().initialize();
+  if (!pendingVisualisationInit.success) {
+    throw new Error("Pending visualisation indexes could not be initialized");
   }
 
   const rawTrustedOrigins: Nullable<string> =

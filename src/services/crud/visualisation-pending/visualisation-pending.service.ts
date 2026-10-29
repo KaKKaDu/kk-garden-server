@@ -22,6 +22,10 @@ export class VisualisationPendingService {
     private readonly visualisationService: VisualisationService,
   ) {}
 
+  initialize(): Promise<SuccessDataAny<{ ready: true }>> {
+    return this.repository.initialize();
+  }
+
   getById = transactional(
     async (
       ownerId: string,

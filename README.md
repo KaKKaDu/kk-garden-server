@@ -9,26 +9,35 @@ origin, and private R2 settings. Review the profile/avatar deployment notes in
 
 For local development, run `npm run dev`. For deployment, run `npm run build`
 then `npm start`. Startup initializes the account-tombstone, avatar-upload,
-rate-limit, and Agenda indexes, then starts the avatar-cleanup worker in the
-server process. Initialization failure prevents the server from starting;
-shutdown drains the worker.
+rate-limit, pending-visualisation, and Agenda indexes, then starts the
+avatar-cleanup worker in the server process. Initialization failure prevents
+the server from starting; shutdown drains the worker.
 Better Auth sessions expire after 24 hours. Account deletion requires a valid
 session and explicit confirmation, with no additional five-minute freshness
 gate.
 
+MongoDB must use a replica set or sharded-cluster topology that supports
+multi-document transactions; standalone MongoDB deployments are not supported.
+
+Pending visualisations have a 72-hour TTL index on `createdAt`. MongoDB's TTL
+monitor deletes asynchronously, so the timestamp is not an exact expiration
+moment or an authorization check; owner-scoped application lookups remain
+authoritative, and removed records return the normal not-found result.
+Agenda cleanup job records have a 72-hour TTL from enqueue time (`data.queuedAt`),
+regardless of job state. TTL deletes the job record, not its R2 object; a job
+that has not completed by then can leave an orphaned object. Better Auth
+collections and avatar upload sessions do not receive TTL indexes.
+
+Shared contract changes must be published and resolved by the server before
+implementing server code that depends on them. Agenda Mongo job-event logging
+is disabled; `agenda_logs` is not currently enabled. The existing
+`ProfileService`/avatar boundary remains unchanged for this architecture polish.
+
 ## Checks and acceptance
 
-`npm run check` runs formatting, lint, and type checks. The smoke scripts cover
-image processing, upload/finalization, profile ownership, pending ownership,
-and account-deletion service and route behavior. They use synthetic data and
-mocks; they do not prove live MongoDB/R2 behavior.
+`npm run check` runs formatting, lint, and type checks. Use
+`npm run env-validate` to validate the configured environment.
 
-`npm run test:avatar-storage` writes synthetic objects to the configured R2
-bucket and exercises its CORS policy. Run it only against a private development
-bucket. `npm run test:auth-rate-limit` requires the configured local server.
-`npm run test:account-deletion-mongo` inserts and removes uniquely identified
-synthetic Mongo records and calls the real deletion transaction; run it only
-against a disposable development database. It does not exercise authenticated
-HTTP or R2 cleanup.
-End-to-end deletion, email reuse, and worker restart/recovery require disposable
-accounts and the configured development MongoDB/R2 environment.
+Smoke/acceptance scripts and benchmark scripts are not maintained in this
+package. Historical plan documents may describe scripts and results from before
+their removal; those commands are no longer available.

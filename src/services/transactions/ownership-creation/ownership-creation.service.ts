@@ -12,7 +12,7 @@ import type {
   VisualisationDto,
 } from "@kk-garden/shared/types";
 import type { ClientSession, Mongoose } from "mongoose";
-import type { AccountDeletionTombstoneService } from "@/services/account-deletion/account-deletion-tombstone.service.ts";
+import type { AccountDeletionTombstoneService } from "@/services/account-deletion/tombstone/account-deletion-tombstone.service.ts";
 
 export class OwnershipCreationService {
   constructor(

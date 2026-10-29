@@ -32,7 +32,7 @@ import { transactional } from "@/types/mongo.types.ts";
 import { captureSuccessData } from "@/utils/capture-success-data.ts";
 import { requireData } from "@/utils/require-data.ts";
 import { Logger } from "@lib/logs/logger.ts";
-import type { AccountDeletionTombstoneService } from "@/services/account-deletion/account-deletion-tombstone.service.ts";
+import type { AccountDeletionTombstoneService } from "@/services/account-deletion/tombstone/account-deletion-tombstone.service.ts";
 
 export class ProfileService {
   constructor(

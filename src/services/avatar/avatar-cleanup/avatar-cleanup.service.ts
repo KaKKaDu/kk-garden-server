@@ -11,9 +11,10 @@ import type { AvatarUploadRepository } from "@/services/avatar/avatar-upload/ava
 import type {
   AvatarCleanupContext,
   AvatarCleanupData,
+  AvatarCleanupJobData,
 } from "@/services/avatar/avatar-cleanup/types.ts";
 import type { AvatarUploadClaim } from "@/services/avatar/avatar-upload/types.ts";
-import type { AccountDeletionTombstoneService } from "@/services/account-deletion/account-deletion-tombstone.service.ts";
+import type { AccountDeletionTombstoneService } from "@/services/account-deletion/tombstone/account-deletion-tombstone.service.ts";
 import { Variables } from "@lib/variables/variables.ts";
 
 const cleanupVariables = Variables.of({
@@ -31,7 +32,7 @@ export class AvatarCleanupService {
 
   start(): Promise<SuccessDataAny<{ started: true }>> {
     return this.repository.start(
-      (job: Job<AvatarCleanupData>): Promise<void> => this.deleteAvatar(job),
+      (job: Job<AvatarCleanupJobData>): Promise<void> => this.deleteAvatar(job),
     );
   }
 
@@ -43,7 +44,7 @@ export class AvatarCleanupService {
     return this.repository.enqueue(data);
   }
 
-  private async deleteAvatar(job: Job<AvatarCleanupData>): Promise<void> {
+  private async deleteAvatar(job: Job<AvatarCleanupJobData>): Promise<void> {
     const owner = UserIdSchema.min(1).safeParse(job.attrs.data.ownerId);
     const target = AvatarCleanupTargetSchema.safeParse(job.attrs.data.target);
     if (!owner.success || !target.success) {

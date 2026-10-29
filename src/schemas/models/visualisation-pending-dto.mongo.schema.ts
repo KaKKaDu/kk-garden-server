@@ -19,6 +19,13 @@ export const VisualisationPendingDtoMongoSchema =
   );
 
 VisualisationPendingDtoMongoSchema.index({ ownerId: 1, pendingId: 1 });
+VisualisationPendingDtoMongoSchema.index(
+  { createdAt: 1 },
+  {
+    name: "visualisations_pending_created_at_ttl_72h",
+    expireAfterSeconds: 259200,
+  },
+);
 
 export const parseVisualisationPendingDto = (
   payload: unknown,

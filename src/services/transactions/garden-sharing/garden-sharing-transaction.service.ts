@@ -11,7 +11,7 @@ import type {
   User,
 } from "@kk-garden/shared/types";
 import type { ClientSession, Mongoose } from "mongoose";
-import type { AccountDeletionTombstoneService } from "@/services/account-deletion/account-deletion-tombstone.service.ts";
+import type { AccountDeletionTombstoneService } from "@/services/account-deletion/tombstone/account-deletion-tombstone.service.ts";
 import type { GardenSharingRepository } from "@/services/crud/garden-sharing/garden-sharing.repository.ts";
 import type { UserService } from "@/services/crud/user/user.service.ts";
 import type { MongoService } from "@/services/mongo/mongo.service.ts";

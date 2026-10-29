@@ -17,6 +17,7 @@ import { getConfiguredMongoDatabase } from "@/services/mongo/mongo.repository.ts
 import type {
   AvatarCleanupContext,
   AvatarCleanupData,
+  AvatarCleanupJobData,
 } from "@/services/avatar/avatar-cleanup/types.ts";
 import { Logger } from "@lib/logs/logger.ts";
 import { Variables } from "@lib/variables/variables.ts";
@@ -34,7 +35,7 @@ export class AvatarCleanupRepository {
   constructor(private readonly mongoService: MongoService) {}
 
   start(
-    handler: (job: Job<AvatarCleanupData>) => Promise<void>,
+    handler: (job: Job<AvatarCleanupJobData>) => Promise<void>,
   ): Promise<SuccessDataAny<{ started: true }>> {
     return this.mongoService.execute(async (connection: Mongoose) => {
       if (this.agenda) {
@@ -52,6 +53,13 @@ export class AvatarCleanupRepository {
       await db
         .collection(cleanupVariables.get("collection-name"))
         .createIndex({ name: 1, "data.target.objectKey": 1 }, { unique: true });
+      await db.collection(cleanupVariables.get("collection-name")).createIndex(
+        { "data.queuedAt": 1 },
+        {
+          name: "avatar_cleanup_jobs_queued_at_ttl_72h",
+          expireAfterSeconds: 259200,
+        },
+      );
       const agenda: Agenda = new Agenda({
         backend: new MongoBackend({
           mongo: db,
@@ -61,7 +69,7 @@ export class AvatarCleanupRepository {
         maxConcurrency: 1,
         lockLimit: 1,
       });
-      agenda.define<AvatarCleanupData>(
+      agenda.define<AvatarCleanupJobData>(
         cleanupVariables.get("job-name"),
         handler,
         {
@@ -107,12 +115,13 @@ export class AvatarCleanupRepository {
       if (!this.agenda) {
         throw new Error("Avatar cleanup has not started");
       }
-      const payload: AvatarCleanupData = {
+      const payload: AvatarCleanupJobData = {
         ownerId: UserIdSchema.min(1).parse(data.ownerId),
         target: AvatarCleanupTargetSchema.parse(data.target),
+        queuedAt: new Date(),
       };
       await this.agenda
-        .create<AvatarCleanupData>(cleanupVariables.get("job-name"), payload)
+        .create<AvatarCleanupJobData>(cleanupVariables.get("job-name"), payload)
         .unique(
           { "data.target.objectKey": payload.target.objectKey },
           { insertOnly: true },

@@ -6,7 +6,7 @@ import type {
 import type { VisualisationPendingService } from "@/services/crud/visualisation-pending/visualisation-pending.service.ts";
 import type { MongoService } from "@/services/mongo/mongo.service.ts";
 import type { ClientSession, Mongoose } from "mongoose";
-import type { AccountDeletionTombstoneService } from "@/services/account-deletion/account-deletion-tombstone.service.ts";
+import type { AccountDeletionTombstoneService } from "@/services/account-deletion/tombstone/account-deletion-tombstone.service.ts";
 
 export class PendingVisualisationCreationService {
   constructor(

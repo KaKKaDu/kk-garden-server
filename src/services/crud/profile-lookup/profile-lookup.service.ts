@@ -15,7 +15,7 @@ import type { ProfileLookup } from "@/services/crud/profile/types.ts";
 import type { UserService } from "@/services/crud/user/user.service.ts";
 import type { AvatarStorageService } from "@/services/avatar/avatar-storage/avatar-storage.service.ts";
 import type { MongoService } from "@/services/mongo/mongo.service.ts";
-import type { AccountDeletionTombstoneService } from "@/services/account-deletion/account-deletion-tombstone.service.ts";
+import type { AccountDeletionTombstoneService } from "@/services/account-deletion/tombstone/account-deletion-tombstone.service.ts";
 import { captureSuccessData } from "@/utils/capture-success-data.ts";
 import { requireData } from "@/utils/require-data.ts";
 import { Logger } from "@lib/logs/logger.ts";

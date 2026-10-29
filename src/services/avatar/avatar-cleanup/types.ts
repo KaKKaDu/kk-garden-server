@@ -10,6 +10,10 @@ export type AvatarCleanupData = {
   target: AvatarCleanupTarget;
 };
 
+export type AvatarCleanupJobData = AvatarCleanupData & {
+  queuedAt: Date;
+};
+
 export type AvatarCleanupContext = {
   referenced: boolean;
   upload: Nullable<ProfileAvatarUploadSession>;

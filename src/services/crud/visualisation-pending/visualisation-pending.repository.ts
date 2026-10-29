@@ -22,6 +22,17 @@ const visualisationPendingVariables = Variables.of({
 export class VisualisationPendingRepository {
   constructor(private readonly mongoService: MongoService) {}
 
+  initialize(): Promise<SuccessDataAny<{ ready: true }>> {
+    return this.mongoService.execute(
+      async (db: Mongoose): Promise<{ ready: true }> => {
+        await this.getModel(db).createIndexes();
+        return { ready: true };
+      },
+      "VisualisationPendingRepository.initialize",
+      false,
+    );
+  }
+
   private getModel(db: Mongoose): Model<VisualisationPendingDto> {
     const existingModel: Nullable<Model<VisualisationPendingDto>> = db.models[
       visualisationPendingVariables.get("model-name")

@@ -5,7 +5,7 @@ import {
   AccountDeletionTombstoneSchema,
   type AccountDeletionTombstone,
 } from "@/schemas/models/account-deletion-tombstone.mongo.schema.ts";
-import type { AccountDeletionTombstoneRepository } from "@/services/account-deletion/account-deletion-tombstone.repository.ts";
+import type { AccountDeletionTombstoneRepository } from "@/services/account-deletion/tombstone/account-deletion-tombstone.repository.ts";
 import { requireData } from "@/utils/require-data.ts";
 
 export class AccountDeletionTombstoneService {

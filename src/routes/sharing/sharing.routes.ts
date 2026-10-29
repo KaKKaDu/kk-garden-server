@@ -1,7 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import type { SuccessDataAny } from "@kk-garden/shared/errors";
 import { getGardenSharingService } from "@/services/crud/garden-sharing/index.ts";
-import { Logger } from "@lib/logs/logger.ts";
 import { registerAuthGuard } from "@lib/routes/auth-guard/auth-guard.ts";
 import { handleRoutes } from "@lib/routes/handle-routes/handle-routes.ts";
 import { sharingGrantListRoute } from "@/routes/sharing/grants/sharing-grant-list.route.ts";
@@ -16,7 +14,7 @@ export const sharingRoutes = async (
   fastify: FastifyInstance,
 ): Promise<void> => {
   registerAuthGuard(fastify);
-  const result: SuccessDataAny = await handleRoutes(
+  await handleRoutes(
     [
       sharingRequestCreateRoute,
       sharingRequestListRoute,
@@ -27,8 +25,8 @@ export const sharingRoutes = async (
       sharingGrantRevokeRoute,
     ],
     fastify,
+    "Sharing",
   );
-  Logger.report("Sharing routes init", result);
   fastify.addHook("onReady", async (): Promise<void> => {
     const initializeResult = await getGardenSharingService().initialize();
     if (!initializeResult.success) {

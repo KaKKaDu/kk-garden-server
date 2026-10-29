@@ -36,7 +36,7 @@ import type {
 import type { ProfileService } from "@/services/crud/profile/profile.service.ts";
 import type { UserService } from "@/services/crud/user/user.service.ts";
 import type { MongoService } from "@/services/mongo/mongo.service.ts";
-import type { AccountDeletionTombstoneService } from "@/services/account-deletion/account-deletion-tombstone.service.ts";
+import type { AccountDeletionTombstoneService } from "@/services/account-deletion/tombstone/account-deletion-tombstone.service.ts";
 import { Logger } from "@lib/logs/logger.ts";
 import { Variables } from "@lib/variables/variables.ts";
 
