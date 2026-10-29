@@ -10,6 +10,7 @@ import {
   getAccountDeletionService,
   getAccountDeletionTombstoneService,
 } from "../src/services/account-deletion/index.ts";
+import { getGardenSharingRepository } from "../src/services/transactions/garden-sharing/index.ts";
 import { getMongoService } from "../src/services/mongo/index.ts";
 import { getConfiguredMongoDatabase } from "../src/services/mongo/mongo.repository.ts";
 
@@ -20,6 +21,21 @@ dotenv.config({ quiet: true });
 type DeletionVerification = {
   remaining: number[];
   tombstone: { userId: string; deletedAt: Date } | null;
+  sharing: {
+    requests: number;
+    grants: number;
+    unrelatedRequests: number;
+    unrelatedGrants: number;
+  };
+};
+
+type SharingSmokeRecord = {
+  _id: string;
+  requesterId?: string;
+  viewerId?: string;
+  ownerId: string;
+  createdAt?: Date;
+  grantedAt?: Date;
 };
 
 type EmailReuseVerification = {
@@ -41,15 +57,23 @@ const run = async (): Promise<void> => {
   if (!tombstoneIndex.success) {
     throw new Error("Tombstone index initialization failed");
   }
+  const sharingIndex = await getGardenSharingRepository().initialize();
+  if (!sharingIndex.success) {
+    throw new Error("Garden sharing index initialization failed");
+  }
 
   const id = new ObjectId();
   const userId = id.toHexString();
+  const peerId = new ObjectId().toHexString();
+  const unrelatedUserId = new ObjectId().toHexString();
   const email = `shard23-${randomUUID()}@example.invalid`;
   const now = new Date();
   const signatureId = `shard23-signature-${randomUUID()}`;
   const visualisationId = `shard23-visualisation-${randomUUID()}`;
   const pendingId = `shard23-pending-${randomUUID()}`;
   const sessionToken = `shard23-session-${randomUUID()}`;
+  const requestIds: string[] = Array.from({ length: 3 }, () => randomUUID());
+  const grantIds: string[] = Array.from({ length: 3 }, () => randomUUID());
 
   try {
     requireData(
@@ -132,6 +156,50 @@ const run = async (): Promise<void> => {
           _id: visualisationId,
         });
         await db
+          .collection<SharingSmokeRecord>("garden_share_requests")
+          .insertMany([
+            {
+              _id: requestIds[0],
+              requesterId: userId,
+              ownerId: peerId,
+              createdAt: now,
+            },
+            {
+              _id: requestIds[1],
+              requesterId: peerId,
+              ownerId: userId,
+              createdAt: now,
+            },
+            {
+              _id: requestIds[2],
+              requesterId: peerId,
+              ownerId: unrelatedUserId,
+              createdAt: now,
+            },
+          ]);
+        await db
+          .collection<SharingSmokeRecord>("garden_share_grants")
+          .insertMany([
+            {
+              _id: grantIds[0],
+              viewerId: userId,
+              ownerId: peerId,
+              grantedAt: now,
+            },
+            {
+              _id: grantIds[1],
+              viewerId: peerId,
+              ownerId: userId,
+              grantedAt: now,
+            },
+            {
+              _id: grantIds[2],
+              viewerId: peerId,
+              ownerId: unrelatedUserId,
+              grantedAt: now,
+            },
+          ]);
+        await db
           .collection<{
             _id: string;
             ownerId: string;
@@ -191,6 +259,21 @@ const run = async (): Promise<void> => {
               { userId },
               { projection: { _id: 0, userId: 1, deletedAt: 1 } },
             );
+          const [requests, grants, unrelatedRequests, unrelatedGrants] =
+            await Promise.all([
+              db
+                .collection<SharingSmokeRecord>("garden_share_requests")
+                .countDocuments({ _id: { $in: requestIds.slice(0, 2) } }),
+              db
+                .collection<SharingSmokeRecord>("garden_share_grants")
+                .countDocuments({ _id: { $in: grantIds.slice(0, 2) } }),
+              db
+                .collection<SharingSmokeRecord>("garden_share_requests")
+                .countDocuments({ _id: requestIds[2] }),
+              db
+                .collection<SharingSmokeRecord>("garden_share_grants")
+                .countDocuments({ _id: grantIds[2] }),
+            ]);
           return {
             remaining,
             tombstone: record
@@ -199,6 +282,7 @@ const run = async (): Promise<void> => {
                   deletedAt: record.deletedAt,
                 }
               : null,
+            sharing: { requests, grants, unrelatedRequests, unrelatedGrants },
           };
         },
         "AccountDeletionMongoSmoke.verifyDeletion",
@@ -211,6 +295,16 @@ const run = async (): Promise<void> => {
     );
     assert.equal(deletedState.tombstone?.userId, userId);
     assert.ok(deletedState.tombstone?.deletedAt instanceof Date);
+    assert.deepEqual(
+      deletedState.sharing,
+      {
+        requests: 0,
+        grants: 0,
+        unrelatedRequests: 1,
+        unrelatedGrants: 1,
+      },
+      "Deletion must remove both relationship directions and preserve unrelated sharing records",
+    );
 
     const replacementId = new ObjectId();
     requireData(
@@ -279,6 +373,12 @@ const run = async (): Promise<void> => {
           db
             .collection<{ _id: string }>("visualisations")
             .deleteMany({ _id: visualisationId }),
+          db
+            .collection<SharingSmokeRecord>("garden_share_requests")
+            .deleteMany({ _id: { $in: requestIds } }),
+          db
+            .collection<SharingSmokeRecord>("garden_share_grants")
+            .deleteMany({ _id: { $in: grantIds } }),
           db
             .collection<{
               _id: string;

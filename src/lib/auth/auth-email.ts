@@ -6,8 +6,15 @@ import {
   handleError,
   type SuccessDataAny,
 } from "@kk-garden/shared/errors";
+import { getProfileService } from "@/services/crud/profile/index.ts";
 import type { Nullable } from "@kk-garden/shared/types";
 import { getEnvService } from "@/services/env/index.ts";
+import {
+  createAuthOtpAccentResolver,
+  type AuthOtpContext,
+  type AuthOtpPayload,
+} from "@/lib/auth/auth-email-accent.ts";
+import { renderAuthOtpEmail } from "@/lib/auth/auth-email-template.ts";
 import { Logger } from "@lib/logs/logger.ts";
 
 import { Variables } from "@lib/variables/variables.ts";
@@ -20,9 +27,81 @@ type SendVerificationOTP = Parameters<
   typeof emailOTP
 >[0]["sendVerificationOTP"];
 
+type AuthEmailMessage = {
+  from: string;
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+};
+
+type AuthEmailTransportResult = {
+  error: { statusCode?: number | null } | null;
+};
+
+type AuthEmailTransport = (
+  message: AuthEmailMessage,
+) => Promise<AuthEmailTransportResult>;
+
 type AuthEmailSender = (
-  payload: Parameters<SendVerificationOTP>[0],
+  payload: AuthOtpPayload,
+  context: AuthOtpContext,
 ) => Promise<SuccessDataAny>;
+
+export const createAuthEmailSenderWithTransport =
+  (
+    from: string,
+    sendEmail: AuthEmailTransport,
+    resolveAccent: ReturnType<typeof createAuthOtpAccentResolver>,
+  ): AuthEmailSender =>
+  async (
+    { email, otp, type }: AuthOtpPayload,
+    context: AuthOtpContext,
+  ): Promise<SuccessDataAny> => {
+    const accent = await resolveAccent({ email, otp, type }, context);
+    const content = renderAuthOtpEmail({
+      otp,
+      type,
+      expiresInSeconds: authEmailVariables.get("otp-expires-in"),
+      accentHex: accent.accentHex,
+    });
+
+    let result: SuccessDataAny;
+    try {
+      const { error } = await sendEmail({
+        from,
+        to: email,
+        ...content,
+      });
+
+      result = error
+        ? {
+            success: false,
+            errors: [
+              new AppError({
+                message: "Resend rejected the OTP email",
+                status: 502,
+                context: { provider: "resend", statusCode: error.statusCode },
+              }),
+            ],
+          }
+        : { success: true };
+    } catch {
+      // Transport exceptions may contain credentials or the email payload.
+      result = {
+        success: false,
+        errors: [
+          new AppError({
+            message: "OTP email transport failed",
+            status: 502,
+            context: { provider: "resend" },
+          }),
+        ],
+      };
+    }
+    Logger.report("auth-email.sendVerificationOTP", result);
+    return result;
+  };
 
 export const createAuthEmailSender = (): SuccessDataAny<AuthEmailSender> => {
   try {
@@ -36,60 +115,15 @@ export const createAuthEmailSender = (): SuccessDataAny<AuthEmailSender> => {
       );
     }
 
-    const resend: Resend = new Resend(apiKey);
-    const sender: AuthEmailSender = async ({
-      email,
-      otp,
-      type,
-    }): Promise<SuccessDataAny> => {
-      let result: SuccessDataAny;
-      try {
-        const { error } = await resend.emails.send({
-          from,
-          to: email,
-          subject:
-            type === "sign-in"
-              ? "Your kk-garden sign-in code"
-              : "Your kk-garden verification code",
-          text: [
-            `Your kk-garden code is: ${otp}`,
-            "",
-            `This code expires in ${authEmailVariables.get("otp-expires-in") / 60} minutes and can only be used once.`,
-            "Do not share this code with anyone.",
-            "",
-            "If you did not request this code, you can ignore this email.",
-          ].join("\n"),
-        });
-
-        result = error
-          ? {
-              success: false,
-              errors: [
-                new AppError({
-                  message: "Resend rejected the OTP email",
-                  status: 502,
-                  context: { provider: "resend", statusCode: error.statusCode },
-                }),
-              ],
-            }
-          : { success: true };
-      } catch {
-        // Transport exceptions may contain credentials or the email payload.
-        result = {
-          success: false,
-          errors: [
-            new AppError({
-              message: "OTP email transport failed",
-              status: 502,
-              context: { provider: "resend" },
-            }),
-          ],
-        };
-      }
-      Logger.report("auth-email.sendVerificationOTP", result);
-      return result;
-    };
-
+    const resend = new Resend(apiKey);
+    const resolveAccent = createAuthOtpAccentResolver((userId) =>
+      getProfileService().getById.direct(userId),
+    );
+    const sender = createAuthEmailSenderWithTransport(
+      from,
+      (message) => resend.emails.send(message),
+      resolveAccent,
+    );
     const result: SuccessDataAny<AuthEmailSender> = {
       success: true,
       data: sender,
@@ -115,7 +149,7 @@ export const createAuthEmailDelivery = (sender: AuthEmailSender) => {
         message: "Email delivery requires an auth request context",
       });
     }
-    const result: SuccessDataAny = await sender(payload);
+    const result: SuccessDataAny = await sender(payload, ctx);
     if (!result.success) {
       failedRequests.add(ctx.context);
     }

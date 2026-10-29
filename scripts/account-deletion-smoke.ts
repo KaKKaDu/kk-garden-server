@@ -7,6 +7,8 @@ import type { AvatarCleanupService } from "../src/services/avatar/avatar-cleanup
 import type { AvatarCleanupData } from "../src/services/avatar/avatar-cleanup/types.ts";
 import type { AccountDeletionTombstoneService } from "../src/services/account-deletion/account-deletion-tombstone.service.ts";
 import { AccountDeletionService } from "../src/services/account-deletion/account-deletion.service.ts";
+import type { GardenSharingRepository } from "../src/services/crud/garden-sharing/garden-sharing.repository.ts";
+import type { ProfileLookupService } from "../src/services/crud/profile-lookup/profile-lookup.service.ts";
 import type { MongoService } from "../src/services/mongo/mongo.service.ts";
 
 /* eslint-disable no-console */
@@ -121,11 +123,40 @@ const runScenario = async (accountChanged: boolean): Promise<void> => {
       return { success: true, data: { queued: true } };
     },
   } as unknown as AvatarCleanupService;
+  const profileLookup = {
+    invalidateLookupCode: async (
+      userId: string,
+      transactionSession: unknown,
+    ): Promise<SuccessDataAny<{ invalidated: boolean }>> => {
+      assert.equal(userId, ownerId);
+      assert.equal(transactionSession, session);
+      events.push("profileLookup.invalidateLookupCode");
+      return { success: true, data: { invalidated: true } };
+    },
+  } as unknown as ProfileLookupService;
+  const gardenSharingRepository = {
+    deleteForAccount: async (
+      userId: string,
+      transactionSession: unknown,
+    ): Promise<
+      SuccessDataAny<{ deletedRequests: number; deletedGrants: number }>
+    > => {
+      assert.equal(userId, ownerId);
+      assert.equal(transactionSession, session);
+      events.push("gardenSharing.deleteForAccount");
+      return {
+        success: true,
+        data: { deletedRequests: 0, deletedGrants: 0 },
+      };
+    },
+  } as unknown as GardenSharingRepository;
 
   const result = await new AccountDeletionService(
     mongoService,
     tombstones,
     avatarCleanup,
+    profileLookup,
+    gardenSharingRepository,
   ).deleteAccount(ownerId);
 
   if (accountChanged) {
@@ -142,6 +173,8 @@ const runScenario = async (accountChanged: boolean): Promise<void> => {
     "signatures.deleteMany",
     "visualisations.deleteMany",
     "visualisations_pending.deleteMany",
+    "profileLookup.invalidateLookupCode",
+    "gardenSharing.deleteForAccount",
     "profiles.deleteOne",
     "session.deleteMany",
     "account.deleteMany",

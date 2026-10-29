@@ -19,5 +19,15 @@ GardenShareRequestMongoSchema.index(
   { unique: true, name: "garden_share_request_pair_unique" },
 );
 
+GardenShareRequestMongoSchema.index(
+  { ownerId: 1, createdAt: -1, _id: -1 },
+  { name: "garden_share_request_owner_created_id" },
+);
+
+GardenShareRequestMongoSchema.index(
+  { requesterId: 1, createdAt: -1, _id: -1 },
+  { name: "garden_share_request_requester_created_id" },
+);
+
 export const parseGardenShareRequest = (payload: unknown): GardenShareRequest =>
   GardenShareRequestSchema.parse(payload);

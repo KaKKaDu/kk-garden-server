@@ -120,6 +120,26 @@ export class ProfileLookupRepository {
     );
   }
 
+  invalidateLookupCode(
+    userId: string,
+    session: Nullable<ClientSession>,
+  ): Promise<SuccessDataAny<{ invalidated: boolean }>> {
+    return this.mongoService.execute(
+      async (connection: Mongoose): Promise<{ invalidated: boolean }> => {
+        const collection = getConfiguredMongoDatabase(
+          connection,
+        ).collection<Profile>(lookupVariables.get("profile-collection-name"));
+        const result = await collection.updateOne(
+          { _id: userId },
+          { $unset: { lookupCode: "" } },
+          { session: session ?? undefined },
+        );
+        return { invalidated: result.modifiedCount > 0 };
+      },
+      "ProfileLookupRepository.invalidateLookupCode",
+    );
+  }
+
   findByLookupCode(lookupCode: string): Promise<SuccessDataAny<ProfileLookup>> {
     return this.mongoService.execute(
       async (connection: Mongoose): Promise<ProfileLookup> => {

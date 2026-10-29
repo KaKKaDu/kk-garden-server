@@ -14,6 +14,8 @@ import { getAvatarCleanupService } from "@/services/avatar/avatar-cleanup/index.
 import { getAccountDeletionTombstoneService } from "@/services/account-deletion/index.ts";
 import { accountRoutes } from "@/routes/account/account.routes.ts";
 import { addMutationOriginGuard } from "@lib/routes/mutation-origin-guard.ts";
+import { sharingRoutes } from "@/routes/sharing/sharing.routes.ts";
+import { gardenRoutes } from "@/routes/garden/garden.routes.ts";
 
 const avatarCleanupService = getAvatarCleanupService();
 
@@ -43,6 +45,8 @@ void init(async (app: FastifyInstance) => {
     .register(authRoutes, { prefix: "/api/auth" })
     .register(accountRoutes, { prefix: "/account" })
     .register(profileRoutes, { prefix: "/profile" })
+    .register(sharingRoutes, { prefix: "/sharing" })
+    .register(gardenRoutes, { prefix: "/garden" })
     .register(generateRoutes, { prefix: "/generate" })
     .register(assignRoutes, { prefix: "/assign" })
     .register(verifyRoutes, { prefix: "/verify" });

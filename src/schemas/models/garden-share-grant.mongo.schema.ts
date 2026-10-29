@@ -19,5 +19,15 @@ GardenShareGrantMongoSchema.index(
   { unique: true, name: "garden_share_grant_pair_unique" },
 );
 
+GardenShareGrantMongoSchema.index(
+  { viewerId: 1, grantedAt: -1, _id: -1 },
+  { name: "garden_share_grant_viewer_granted_id" },
+);
+
+GardenShareGrantMongoSchema.index(
+  { ownerId: 1, grantedAt: -1, _id: -1 },
+  { name: "garden_share_grant_owner_granted_id" },
+);
+
 export const parseGardenShareGrant = (payload: unknown): GardenShareGrant =>
   GardenShareGrantSchema.parse(payload);

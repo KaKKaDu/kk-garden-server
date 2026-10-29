@@ -24,7 +24,6 @@ const sharingVariables = Variables.of({
   "request-collection-name": "garden_share_requests",
   "grant-model-name": "GardenShareGrant",
   "grant-collection-name": "garden_share_grants",
-  "list-limit": 50,
 } as const);
 
 export class GardenSharingRepository {
@@ -140,19 +139,31 @@ export class GardenSharingRepository {
     async (
       userId: string,
       direction: GardenShareDirection,
+      page: number,
+      pageSize: number,
       session: Nullable<ClientSession>,
-    ): Promise<SuccessDataAny<GardenShareRequest[]>> => {
+    ): Promise<
+      SuccessDataAny<{ items: GardenShareRequest[]; hasNextPage: boolean }>
+    > => {
       return this.mongoService.execute(
-        async (db: Mongoose): Promise<GardenShareRequest[]> => {
+        async (
+          db: Mongoose,
+        ): Promise<{ items: GardenShareRequest[]; hasNextPage: boolean }> => {
           const field: RequestActor =
             direction === "incoming" ? "ownerId" : "requesterId";
           const query = this.getRequestModel(db)
             .find({ [field]: userId })
-            .sort({ createdAt: -1 })
-            .limit(sharingVariables.get("list-limit"));
+            .sort({ createdAt: -1, _id: -1 })
+            .skip((page - 1) * pageSize)
+            .limit(pageSize + 1);
           if (session) query.session(session);
           const documents: DocumentLike[] = await query.exec();
-          return documents.map((document) => this.toRequest(document));
+          return {
+            items: documents
+              .slice(0, pageSize)
+              .map((document) => this.toRequest(document)),
+            hasNextPage: documents.length > pageSize,
+          };
         },
         "GardenSharingRepository.listRequests",
       );
@@ -262,18 +273,30 @@ export class GardenSharingRepository {
     async (
       userId: string,
       direction: GardenShareDirection,
+      page: number,
+      pageSize: number,
       session: Nullable<ClientSession>,
-    ): Promise<SuccessDataAny<GardenShareGrant[]>> => {
+    ): Promise<
+      SuccessDataAny<{ items: GardenShareGrant[]; hasNextPage: boolean }>
+    > => {
       return this.mongoService.execute(
-        async (db: Mongoose): Promise<GardenShareGrant[]> => {
+        async (
+          db: Mongoose,
+        ): Promise<{ items: GardenShareGrant[]; hasNextPage: boolean }> => {
           const field = direction === "incoming" ? "viewerId" : "ownerId";
           const query = this.getGrantModel(db)
             .find({ [field]: userId })
-            .sort({ grantedAt: -1 })
-            .limit(sharingVariables.get("list-limit"));
+            .sort({ grantedAt: -1, _id: -1 })
+            .skip((page - 1) * pageSize)
+            .limit(pageSize + 1);
           if (session) query.session(session);
           const documents: DocumentLike[] = await query.exec();
-          return documents.map((document) => this.toGrant(document));
+          return {
+            items: documents
+              .slice(0, pageSize)
+              .map((document) => this.toGrant(document)),
+            hasNextPage: documents.length > pageSize,
+          };
         },
         "GardenSharingRepository.listGrants",
       );
@@ -303,6 +326,39 @@ export class GardenSharingRepository {
           return { deleted: true };
         },
         "GardenSharingRepository.deleteGrantByOwner",
+      );
+    },
+  );
+
+  deleteForAccount = transactional(
+    async (
+      userId: string,
+      session: Nullable<ClientSession>,
+    ): Promise<
+      SuccessDataAny<{ deletedRequests: number; deletedGrants: number }>
+    > => {
+      return this.mongoService.execute(
+        async (
+          db: Mongoose,
+        ): Promise<{ deletedRequests: number; deletedGrants: number }> => {
+          const requestQuery = this.getRequestModel(db).deleteMany({
+            $or: [{ requesterId: userId }, { ownerId: userId }],
+          });
+          if (session) requestQuery.session(session);
+          const requestResult = await requestQuery.exec();
+
+          const grantQuery = this.getGrantModel(db).deleteMany({
+            $or: [{ viewerId: userId }, { ownerId: userId }],
+          });
+          if (session) grantQuery.session(session);
+          const grantResult = await grantQuery.exec();
+
+          return {
+            deletedRequests: requestResult.deletedCount,
+            deletedGrants: grantResult.deletedCount,
+          };
+        },
+        "GardenSharingRepository.deleteForAccount",
       );
     },
   );

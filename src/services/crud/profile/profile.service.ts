@@ -8,6 +8,7 @@ import {
   createProfilePalette,
 } from "@kk-garden/shared/constants";
 import type {
+  GardenProfileResponse,
   ProfileAvatarDeleteResponse,
   ProfileOwnerResponse,
 } from "@kk-garden/shared/schemas";
@@ -28,6 +29,7 @@ import type { AvatarStorageService } from "@/services/avatar/avatar-storage/avat
 import type { AvatarCleanupService } from "@/services/avatar/avatar-cleanup/avatar-cleanup.service.ts";
 import type { MongoService } from "@/services/mongo/mongo.service.ts";
 import { transactional } from "@/types/mongo.types.ts";
+import { captureSuccessData } from "@/utils/capture-success-data.ts";
 import { requireData } from "@/utils/require-data.ts";
 import { Logger } from "@lib/logs/logger.ts";
 import type { AccountDeletionTombstoneService } from "@/services/account-deletion/account-deletion-tombstone.service.ts";
@@ -150,6 +152,51 @@ export class ProfileService {
       Logger.report("ProfileService.getProfile", result);
       return result;
     }
+  }
+
+  getGardenViewProfile(
+    userId: string,
+  ): Promise<SuccessDataAny<GardenProfileResponse>> {
+    return captureSuccessData(
+      "ProfileService.getGardenViewProfile",
+      async (): Promise<GardenProfileResponse> => {
+        await this.tombstones.assertNotDeletedAsNotFound(
+          userId,
+          "Garden not found",
+        );
+        const user: User = requireData(
+          await this.userService.getById.direct(userId),
+          "Garden not found",
+        );
+        if (user.status !== "active") {
+          throw new AppError({ status: 404, message: "Garden not found" });
+        }
+
+        const profile: Nullable<Profile> = requireData(
+          await this.getById.direct(userId),
+          "Garden profile lookup failed",
+        ).profile;
+        const customHex: Nullable<string> = profile?.accentHex;
+        const avatar: GardenProfileResponse["avatar"] = profile?.avatarObjectKey
+          ? requireData(
+              await this.avatarStorage.signRead(profile.avatarObjectKey),
+              "Avatar delivery could not be signed",
+            )
+          : null;
+
+        return {
+          displayName: profile?.displayName ?? "Garden owner",
+          ...(profile?.bio ? { bio: profile.bio } : {}),
+          accent: {
+            ...(customHex ? { customHex } : {}),
+            effectiveHex: createProfilePalette(
+              customHex ?? DEFAULT_PROFILE_ACCENT_HEX,
+            ).accent,
+          },
+          avatar,
+        };
+      },
+    );
   }
 
   async updateProfile(

@@ -1,4 +1,4 @@
-import { getAccountDeletionTombstoneService } from "@/services/account-deletion/index.ts";
+import { getAccountDeletionTombstoneService } from "@/services/account-deletion/tombstone/index.ts";
 import { getAvatarStorageService } from "@/services/avatar/avatar-storage/index.ts";
 import { getUserService } from "@/services/crud/user/index.ts";
 import { ProfileLookupRepository } from "@/services/crud/profile-lookup/profile-lookup.repository.ts";

@@ -9,6 +9,8 @@ import type {
   ProfileAvatarUploadSession,
 } from "@kk-garden/shared/types";
 import type { AvatarCleanupService } from "@/services/avatar/avatar-cleanup/avatar-cleanup.service.ts";
+import type { GardenSharingRepository } from "@/services/crud/garden-sharing/garden-sharing.repository.ts";
+import type { ProfileLookupService } from "@/services/crud/profile-lookup/profile-lookup.service.ts";
 import type { MongoService } from "@/services/mongo/mongo.service.ts";
 import { getConfiguredMongoDatabase } from "@/services/mongo/mongo.repository.ts";
 import type { AccountDeletionTombstoneService } from "@/services/account-deletion/account-deletion-tombstone.service.ts";
@@ -38,6 +40,8 @@ export class AccountDeletionService {
     private readonly mongoService: MongoService,
     private readonly tombstones: AccountDeletionTombstoneService,
     private readonly avatarCleanup: AvatarCleanupService,
+    private readonly profileLookup: ProfileLookupService,
+    private readonly gardenSharingRepository: GardenSharingRepository,
   ) {}
 
   async deleteAccount(userId: string): Promise<SuccessDataAny<DeletionResult>> {
@@ -146,6 +150,7 @@ export class AccountDeletionService {
                 await db
                   .collection("visualisations_pending")
                   .deleteMany({ ownerId: userId }, { session });
+                await this.purgeSharingForUser(userId, session);
                 await db
                   .collection<{ _id: string }>("profiles")
                   .deleteOne({ _id: userId }, { session });
@@ -225,6 +230,20 @@ export class AccountDeletionService {
         ],
       };
     }
+  }
+
+  private async purgeSharingForUser(
+    userId: string,
+    session: ClientSession,
+  ): Promise<void> {
+    requireData(
+      await this.profileLookup.invalidateLookupCode(userId, session),
+      "Profile lookup code could not be invalidated",
+    );
+    requireData(
+      await this.gardenSharingRepository.deleteForAccount(userId, session),
+      "Garden sharing records could not be deleted",
+    );
   }
 
   private getAvatarCleanupTargets(

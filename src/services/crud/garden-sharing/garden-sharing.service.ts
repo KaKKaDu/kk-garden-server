@@ -2,22 +2,31 @@ import { AppError, type SuccessDataAny } from "@kk-garden/shared/errors";
 import type {
   CreateGardenShareRequestResponse,
   GardenShareActionResponse,
-  GardenShareDirection,
+  GardenShareListQuery,
   GardenShareListEntry,
   GardenShareListResponse,
+  GardenProfileResponse,
+  GardenViewResponse,
   ProfileLookupCardResponse,
 } from "@kk-garden/shared/schemas";
 import type {
   GardenShareGrant,
   GardenShareRequest,
   Nullable,
+  Ownership,
+  Signature,
   User,
+  VisualisationDto,
 } from "@kk-garden/shared/types";
 import type { AccountDeletionTombstoneService } from "@/services/account-deletion/account-deletion-tombstone.service.ts";
 import type { GardenSharingRepository } from "@/services/crud/garden-sharing/garden-sharing.repository.ts";
 import type { ProfileLookupService } from "@/services/crud/profile-lookup/profile-lookup.service.ts";
+import type { ProfileService } from "@/services/crud/profile/profile.service.ts";
 import type { GardenSharingTransactionService } from "@/services/transactions/garden-sharing/garden-sharing-transaction.service.ts";
+import type { OwnershipService } from "@/services/crud/ownership/ownership.service.ts";
+import type { SignatureService } from "@/services/crud/signature/signature.service.ts";
 import type { UserService } from "@/services/crud/user/user.service.ts";
+import type { VisualisationService } from "@/services/crud/visualisation/visualisation.service.ts";
 import { captureSuccessData } from "@/utils/capture-success-data.ts";
 import { requireData } from "@/utils/require-data.ts";
 
@@ -26,8 +35,12 @@ export class GardenSharingService {
     private readonly repository: GardenSharingRepository,
     private readonly transactions: GardenSharingTransactionService,
     private readonly profileLookup: ProfileLookupService,
+    private readonly profileService: ProfileService,
     private readonly userService: UserService,
     private readonly tombstones: AccountDeletionTombstoneService,
+    private readonly ownershipService: OwnershipService,
+    private readonly signatureService: SignatureService,
+    private readonly visualisationService: VisualisationService,
   ) {}
 
   initialize(): Promise<SuccessDataAny<{ ready: true }>> {
@@ -59,21 +72,26 @@ export class GardenSharingService {
 
   listRequests(
     userId: string,
-    direction: GardenShareDirection,
+    query: GardenShareListQuery,
   ): Promise<SuccessDataAny<GardenShareListResponse>> {
     return captureSuccessData(
       "GardenSharingService.listRequests",
       async (): Promise<GardenShareListResponse> => {
         await this.assertActive(userId, "forbidden");
-        const requests: GardenShareRequest[] = requireData(
-          await this.repository.listRequests.direct(userId, direction),
+        const page = requireData(
+          await this.repository.listRequests.direct(
+            userId,
+            query.direction,
+            query.page,
+            query.pageSize,
+          ),
           "Garden sharing requests could not be loaded",
         );
         const entries = await Promise.all(
-          requests.map(
+          page.items.map(
             async (request): Promise<GardenShareListEntry | null> => {
               const peerId: string =
-                direction === "incoming"
+                query.direction === "incoming"
                   ? request.requesterId
                   : request.ownerId;
               const card = await this.getCardOrNull(peerId);
@@ -92,6 +110,9 @@ export class GardenSharingService {
           items: entries.filter(
             (entry): entry is GardenShareListEntry => entry !== null,
           ),
+          page: query.page,
+          pageSize: query.pageSize,
+          hasNextPage: page.hasNextPage,
         };
       },
     );
@@ -129,35 +150,45 @@ export class GardenSharingService {
 
   listGrants(
     userId: string,
-    direction: GardenShareDirection,
+    query: GardenShareListQuery,
   ): Promise<SuccessDataAny<GardenShareListResponse>> {
     return captureSuccessData(
       "GardenSharingService.listGrants",
       async (): Promise<GardenShareListResponse> => {
         await this.assertActive(userId, "forbidden");
-        const grants: GardenShareGrant[] = requireData(
-          await this.repository.listGrants.direct(userId, direction),
+        const page = requireData(
+          await this.repository.listGrants.direct(
+            userId,
+            query.direction,
+            query.page,
+            query.pageSize,
+          ),
           "Garden access list could not be loaded",
         );
         const entries = await Promise.all(
-          grants.map(async (grant): Promise<GardenShareListEntry | null> => {
-            const peerId: string =
-              direction === "incoming" ? grant.ownerId : grant.viewerId;
-            const card = await this.getCardOrNull(peerId);
-            return card
-              ? {
-                  id: grant._id,
-                  displayName: card.displayName,
-                  avatar: card.avatar,
-                  createdAt: grant.grantedAt,
-                }
-              : null;
-          }),
+          page.items.map(
+            async (grant): Promise<GardenShareListEntry | null> => {
+              const peerId: string =
+                query.direction === "incoming" ? grant.ownerId : grant.viewerId;
+              const card = await this.getCardOrNull(peerId);
+              return card
+                ? {
+                    id: grant._id,
+                    displayName: card.displayName,
+                    avatar: card.avatar,
+                    createdAt: grant.grantedAt,
+                  }
+                : null;
+            },
+          ),
         );
         return {
           items: entries.filter(
             (entry): entry is GardenShareListEntry => entry !== null,
           ),
+          page: query.page,
+          pageSize: query.pageSize,
+          hasNextPage: page.hasNextPage,
         };
       },
     );
@@ -186,6 +217,48 @@ export class GardenSharingService {
       }
       return grant;
     });
+  }
+
+  getGardenForViewer(
+    viewerId: string,
+    grantId: string,
+  ): Promise<SuccessDataAny<GardenViewResponse>> {
+    return captureSuccessData(
+      "GardenSharingService.getGardenForViewer",
+      async (): Promise<GardenViewResponse> => {
+        const grant: GardenShareGrant = requireData(
+          await this.repository.getGrantById.direct(grantId),
+          "Garden not found",
+        );
+        if (grant.viewerId !== viewerId) {
+          throw new AppError({ status: 404, message: "Garden not found" });
+        }
+        requireData(
+          await this.authorize(viewerId, grant.ownerId),
+          "Garden not found",
+        );
+        const ownership: Ownership = requireData(
+          await this.ownershipService.getByUserId.direct(grant.ownerId),
+          "Garden not found",
+        );
+        const signature: Signature = requireData(
+          await this.signatureService.getById.direct(ownership.signatureId),
+          "Garden not found",
+        );
+        const garden: VisualisationDto = requireData(
+          await this.visualisationService.getById.direct(
+            signature.visualisationId,
+            false,
+          ),
+          "Garden not found",
+        );
+        const profile: GardenProfileResponse = requireData(
+          await this.profileService.getGardenViewProfile(grant.ownerId),
+          "Garden not found",
+        );
+        return { garden, profile };
+      },
+    );
   }
 
   private async assertActive(

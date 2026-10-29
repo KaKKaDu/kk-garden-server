@@ -9,6 +9,7 @@ import {
   type ProfileLookupCardResponse,
 } from "@kk-garden/shared/schemas";
 import type { Nullable, Profile, User } from "@kk-garden/shared/types";
+import type { ClientSession } from "mongoose";
 import type { ProfileLookupRepository } from "@/services/crud/profile-lookup/profile-lookup.repository.ts";
 import type { ProfileLookup } from "@/services/crud/profile/types.ts";
 import type { UserService } from "@/services/crud/user/user.service.ts";
@@ -18,6 +19,7 @@ import type { AccountDeletionTombstoneService } from "@/services/account-deletio
 import { captureSuccessData } from "@/utils/capture-success-data.ts";
 import { requireData } from "@/utils/require-data.ts";
 import { Logger } from "@lib/logs/logger.ts";
+import { transactional } from "@/types/mongo.types.ts";
 
 const lookupCodeAlphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 
@@ -259,4 +261,13 @@ export class ProfileLookupService {
       },
     );
   }
+
+  invalidateLookupCode = transactional(
+    async (
+      userId: string,
+      session: Nullable<ClientSession>,
+    ): Promise<SuccessDataAny<{ invalidated: boolean }>> => {
+      return this.lookupRepository.invalidateLookupCode(userId, session);
+    },
+  );
 }
